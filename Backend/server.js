@@ -1,5 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 dotenv.config();
 
 const helmet     = require('helmet');
@@ -7,14 +9,11 @@ const cors       = require('cors');
 const rateLimit  = require('express-rate-limit');
 const connectDB  = require('./config/db');
 
-connectDB();
+connectDB();   
 
 const app = express();
 
 app.use(helmet());
-
-app.use(cors({ origin: '*', credentials: true }));
-
 
 app.use(cors({
   origin: 'http://localhost:5173', 

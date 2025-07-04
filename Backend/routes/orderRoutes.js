@@ -1,14 +1,15 @@
-const express = require('express');
-const Order = require('../models/Order');
-const { protect } = require('../middleware/authMiddleware');
-const router = express.Router();
-const mongoose = require('mongoose'); 
-const Joi = require('joi');
-const Menu = require('../models/MenuItem');
+const express  = require('express');
+const router   = express.Router();
+const mongoose = require('mongoose');
+const Joi      = require('joi');
 
+const Order = require('../models/Order');
+const Menu  = require('../models/MenuItem');
+
+const verifyToken = require('../middleware/verifyToken'); 
 
 const orderSchemaJoi = Joi.object({
-  tableNumber: Joi.number().integer().min(1).required(),
+  tableNumber: Joi.number().integer().min(1),       
   items: Joi.array()
     .items(
       Joi.object({
@@ -20,47 +21,47 @@ const orderSchemaJoi = Joi.object({
     .required(),
 });
 
-  router.post('/', protect('admin', 'waiter'),async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
   const { error, value } = orderSchemaJoi.validate(req.body);
   if (error) return res.status(400).json({ error: error.details[0].message });
 
   const { tableNumber, items } = value;
-
-  const menuIds = items.map(i => i.menuItem);
+  const menuIds  = items.map((i) => i.menuItem);
   const menuDocs = await Menu.find({ _id: { $in: menuIds } });
 
   if (menuDocs.length !== menuIds.length) {
     return res.status(400).json({ error: 'One or more menu items not found' });
   }
 
-  const priceMap = Object.fromEntries(menuDocs.map(d => [d._id.toString(), d.price]));
-
+  const priceMap = Object.fromEntries(menuDocs.map((d) => [d._id.toString(), d.price]));
   let total = 0;
-  const itemsWithPrice = items.map(i => {
+
+  const itemsWithPrice = items.map((i) => {
     const lineTotal = priceMap[i.menuItem] * i.quantity;
     total += lineTotal;
-    return { ...i, linePrice: lineTotal };
+    return { ...i, price: priceMap[i.menuItem] };
   });
 
-  const order = await Order.create({
-    tableNumber,
-    items: itemsWithPrice,
-    orderedBy: req.user.userId,
-    orderedBy: req.user._id,  
-    totalPrice: total,
-  });
+  try {
+    const order = await Order.create({
+      tableNumber,
+      items: itemsWithPrice,
+      orderedBy: req.user.id,  
+      totalAmount: total,
+    });
 
-  res.status(201).json(order);
+    res.status(201).json({ message: 'Order placed', order });
+  } catch (err) {
+    console.error('Order error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-router.get('/', protect('admin', 'waiter'), async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
   const { status, table, page = 1, limit = 10 } = req.query;
-
   const q = {};
-  if (status) q.status = status;                    
-  if (table)  q.tableNumber = Number(table);      
-
-  if (req.user.role === 'waiter') q.orderedBy = req.user.userId;
+  if (status) q.status = status;
+  if (table)  q.tableNumber = Number(table);
 
   const skip = (Number(page) - 1) * Number(limit);
 
@@ -73,41 +74,27 @@ router.get('/', protect('admin', 'waiter'), async (req, res) => {
 
   const count = await Order.countDocuments(q);
 
-  res.json({
-    page: Number(page),
-    pages: Math.ceil(count / limit),
-    total: count,
-    orders,
-  });
+  res.json({ page: Number(page), pages: Math.ceil(count / limit), total: count, orders });
 });
 
-
-module.exports = router;
-
-router.put('/:id', protect('admin', 'waiter'), async (req, res) => {
-  const { id } = req.params;
+router.put('/:id', verifyToken, async (req, res) => {
+  const { id }     = req.params;
   const { status } = req.body;
-  
+
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ error: 'Invalid order ID' });
   }
 
-  const allowedNext = {
-    placed: ['preparing'],
-    preparing: ['served'],
-    served: [] // terminal
-  };
+  const allowedNext = { placed: ['preparing'], preparing: ['served'], served: [] };
 
   try {
     const order = await Order.findById(id);
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
+    if (!order) return res.status(404).json({ error: 'Order not found' });
 
- const current = order.status;
+    const current = order.status;
     if (!allowedNext[current].includes(status)) {
       return res.status(400).json({
-        error: `Status can only move ${current} → ${allowedNext[current].join(' / ') || 'no further change'}`
+        error: `Status can only move ${current} → ${allowedNext[current].join(' / ') || 'no further change'}`,
       });
     }
 
@@ -116,16 +103,13 @@ router.put('/:id', protect('admin', 'waiter'), async (req, res) => {
     if (status === 'served')    order.servedAt   = new Date();
 
     await order.save();
+    await order.populate([{ path: 'items.menuItem', select: 'name price' }, { path: 'orderedBy', select: 'email' }]);
 
-    await order.populate([
-      { path: 'items.menuItem', select: 'name price' },
-      { path: 'orderedBy',      select: 'email'      }
-    ]);
-
-    res.json(order); 
+    res.json(order);
   } catch (err) {
-    console.error('Update failed:', err.message);  
-    res.status(500).json({ error: err.message });   
-
+    console.error('Update failed:', err);
+    res.status(500).json({ error: err.message });
   }
 });
+
+module.exports = router;

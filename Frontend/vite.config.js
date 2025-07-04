@@ -6,6 +6,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/menu': 'http://localhost:5000',
+      '/auth': 'http://localhost:5000',
+       '/order': 'http://localhost:5000',
     },
   },
 });
