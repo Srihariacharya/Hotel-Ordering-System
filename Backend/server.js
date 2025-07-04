@@ -17,8 +17,8 @@ app.use(cors({ origin: '*', credentials: true }));
 
 
 app.use(cors({
-  origin: 'http://localhost:5173', // React's dev server
-  credentials: true               // If sending cookies/token
+  origin: 'http://localhost:5173', 
+  credentials: true               
 }));
 
 
