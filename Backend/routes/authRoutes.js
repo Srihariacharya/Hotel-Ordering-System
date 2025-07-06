@@ -6,7 +6,10 @@ const router   = express.Router();
 const User = require('../models/User');
 
 router.post('/register', async (req, res) => {
-  const { name, email, password } = req.body;
+    let { name,email, password } = req.body;
+     email    = email.trim().toLowerCase();
+    password = password.trim(); 
+    console.log('📡 Mongo host in /register:', mongoose.connection.host);
 
   try {
     if (!name || !email || !password) {
@@ -17,20 +20,18 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
-
     const user = await User.create({
       name,
       email,
-      password: hashedPassword,
+      password,
+
     });
 
     const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '4d' }
-    );
-
+  { userId: user._id, role: user.role },   // <-- use userId key
+  process.env.JWT_SECRET,
+  { expiresIn: '1d' }
+);
     return res.status(201).json({
       token,
       user: { id: user._id, name: user.name, role: user.role },
@@ -43,23 +44,33 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  console.log('Login request:', { email, password });
+  console.log('📡 Mongo host in /login   :', mongoose.connection.host);
 
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      console.log('❌ Email not found in DB');
+      return res.status(400).json({ message: 'Email not found' });
     }
+
+    console.log('✅ Found user:', user);
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
+    console.log('🔍 Comparing passwords:', {
+      plain: password,
+      hashed: user.password,
+      isMatch
+    });
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '3d' }
-    );
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Wrong password' });
+    }
+const token = jwt.sign(
+  { userId: user._id, role: user.role },   // <-- use userId key
+  process.env.JWT_SECRET,
+  { expiresIn: '1d' }
+);
 
     return res.json({
       token,
@@ -71,4 +82,5 @@ router.post('/login', async (req, res) => {
   }
 });
 
-module.exports = router;
+
+module.exports = router; 

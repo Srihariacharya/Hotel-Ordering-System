@@ -14,12 +14,10 @@ const registerUser = async (req, res) => {
     if (already) {
       return res.status(400).json({ message: 'Email already registered' });
     }
-    const hashed = await bcrypt.hash(password, 12);
-
     const user = await User.create({
-      name,
+      name: name.trim(),
       email,
-      password: hashed,
+      password, 
       role: 'customer',      
     });
 

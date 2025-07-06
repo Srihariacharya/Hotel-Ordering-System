@@ -2,10 +2,8 @@ const express  = require('express');
 const router   = express.Router();
 const mongoose = require('mongoose');
 const Joi      = require('joi');
-
 const Order = require('../models/Order');
 const Menu  = require('../models/MenuItem');
-
 const verifyToken = require('../middleware/verifyToken'); 
 
 const orderSchemaJoi = Joi.object({
