@@ -1,92 +1,100 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import MenuItemCard from '../components/MenuItemCard';
+import PageWrapper from '../components/Layout';
 
 const Menu = () => {
   const [menuItems,  setMenuItems]  = useState([]);
-  const [quantities, setQuantities] = useState({}); 
+  const [quantities, setQuantities] = useState({});  
   const [total,      setTotal]      = useState(0);
   const [tableNumber, setTableNumber] = useState('');
+  <PageWrapper>
+    <h1 className="text-3xl font-bold mb-6 text-center">Menu</h1>
+
+    <div className="mb-6 text-center">
+      <label className="mr-2 font-medium">Table Number</label>
+      <input
+        type="text"
+        className="px-3 py-1 rounded bg-gray-800 text-white"
+        placeholder="Enter Table #"
+      />
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/* map your menu items here */}
+    </div>
+  </PageWrapper>
+
+useEffect(() => {
+  const token = localStorage.getItem('token');
+  if (token) {
+
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  }
+}, []);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    }
-  }, []);
-
-  useEffect(() => {
-    axios
-      .get('/menu')                    
+    axios.get('/menu')
       .then((res) => setMenuItems(res.data))
-      .catch((err) => console.error(err));
+      .catch(console.error);
   }, []);
+
 
   const handleQuantityChange = (id, price, qty) => {
-  const updated = { ...quantities };
+    const updated = { ...quantities };
+    if (qty > 0) {
+      updated[id] = { quantity: qty, price };
+    } else {
+      delete updated[id];
+    }
+    setQuantities(updated);
 
-  if (qty > 0) {
-    updated[id] = { quantity: qty, price };
-  } else {
-    delete updated[id];   
-  }
-
-  setQuantities(updated);
-
-  const newTotal = Object.values(updated).reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  setTotal(newTotal);
-};
-
-  const handlePlaceOrder = () => {
-    const token = localStorage.getItem('token');
-    if (!token) return alert('Please login first!');
-
-    const items = Object.entries(quantities).map(([id, qObj]) => ({
-  menuItem: id,
-  quantity: qObj.quantity,
-}));
-
-
-const payload = { items };
-if (tableNumber) payload.tableNumber = tableNumber; 
-
-axios
-  .post('/order', payload)
-      .then(() => {
-        alert('Order placed successfully!');
-        setQuantities({});
-        setTotal(0);
-        setTableNumber('');
-      })
-      .catch((err) => {
-        console.error(err);
-        alert(err.response?.data?.error || 'Failed to place order.');
-      });
+    const newTotal = Object.values(updated).reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+    setTotal(newTotal);
   };
 
+  const handlePlaceOrder = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return alert('Please log in first');
+
+    const items = Object.entries(quantities).map(([id, obj]) => ({
+      menuItem: id,
+      quantity: obj.quantity,
+      price:    obj.price             
+    }));
+
+    try {
+      await axios.post(
+        '/order',
+        { tableNumber: Number(tableNumber), items },
+        { headers: { Authorization: `Bearer ${token}` } }  
+      );
+      alert('Order placed ✔️');
+      setQuantities({});
+      setTotal(0);
+      setTableNumber('');
+    } catch (err) {
+      console.error(err.response?.data || err);
+      alert(err.response?.data?.error || 'Failed to place order');
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 text-gray-800">
-      <h1 className="text-3xl font-bold mb-6 text-center flex items-center justify-center gap-2">
-        <span role="img" aria-label="menu">🧾</span> Menu
-      </h1>
-
-      <div className="flex justify-center mb-4">
-        <label className="text-sm font-medium mr-2">Table Number</label>
+    <div className="max-w-7xl mx-auto px-4 py-6">
+    <h1 className="text-3xl font-bold mb-4 text-center">🧾 Menu</h1>
+    <div className="mb-6 text-center">
+        <label className="mr-2 font-medium">Table Number</label>
         <input
-          type="number"
-          min="1"
-          value={tableNumber}
-          onChange={(e) => setTableNumber(parseInt(e.target.value, 10) || '')}
-          className="w-24 p-1 border rounded text-center text-white"
-          required
-        />
-      </div>
+          type="text"
+          className="px-3 py-1 rounded bg-gray-800 text-white"
+          placeholder="Enter Table #"
+       />
+    </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {menuItems.map((item) => (
           <MenuItemCard
             key={item._id}
@@ -97,6 +105,7 @@ axios
         ))}
       </div>
 
+
       <div className="mt-6 text-xl font-semibold text-center">
         Total: ₹{total}
       </div>
@@ -104,9 +113,9 @@ axios
       <div className="mt-4 text-center">
         <button
           onClick={handlePlaceOrder}
-          disabled={total === 0}
+          disabled={total === 0 || !tableNumber}
           className={`px-4 py-2 rounded font-semibold
-            ${total === 0
+            ${total === 0 || !tableNumber
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
         >

@@ -27,11 +27,15 @@ a:hover {
 }
 
 body {
+   @apply bg-veg-50 text-veg-800;
   margin: 0;
   display: flex;
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-image: url('/bg/veg-pattern.webp');   /* drop a seamless pattern or photo here */
+  background-size: cover;
+  background-attachment: fixed;  
 }
 
 h1 {

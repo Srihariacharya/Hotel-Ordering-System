@@ -9,8 +9,8 @@ const orderSchema = new mongoose.Schema(
         price:    { type: Number, required: true },
       },
     ],
-    tableNumber: Number,
-    totalAmount: { type: Number, required: true },
+    tableNumber: { type: Number, required: true },
+    totalPrice:  { type: Number, required: true },   // ✓ renamed
     orderedBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     status:      { type: String, enum: ['placed', 'preparing', 'served'], default: 'placed' },
     preparedAt:  Date,
