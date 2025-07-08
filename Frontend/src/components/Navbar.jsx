@@ -48,7 +48,7 @@ const Navbar = () => {
 
   return (
     <nav className="bg-veg-700 text-veg-100 shadow-md sticky top-0 z-50">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 py-6">
         <div className="flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2 font-bold text-xl">
             <span className="text-veg-50">HotelOrder</span>
@@ -60,7 +60,7 @@ const Navbar = () => {
             <Link to="/cart" className="relative flex items-center">
               <ShoppingCart className="h-6 w-6" />
               {cartItems.length > 0 && (
-                <span className="absolute -top-1 -right-2 rounded-full bg-red-600 text-white text-xs w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-3 rounded-full bg-red-600 text-white text-xs w-5 h-5 flex items-center justify-center">
                   {cartItems.length}
                 </span>
               )}

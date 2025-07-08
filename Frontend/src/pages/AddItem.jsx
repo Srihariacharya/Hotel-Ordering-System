@@ -41,7 +41,7 @@ const PlaceOrder = () => {
   }
 
   return (
-    <div className="max-w-xl mx-auto p-6">
+     <div className="w-full px-4 py-6">
       <h1 className="text-2xl font-bold mb-4">Confirm Your Order</h1>
       <ul className="mb-4">
         {cartItems.map(item => (

@@ -21,7 +21,7 @@ const Cart = () => {
   }
 
   return (
-    <section className="max-w-3xl mx-auto py-8">
+    <section className="w-full px-4 py-6">
       <h1 className="text-3xl font-bold mb-6">My Cart</h1>
 
       <div className="space-y-4">

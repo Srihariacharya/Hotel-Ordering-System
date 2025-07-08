@@ -1,12 +1,12 @@
-import Navbar from './Navbar';
 import { Outlet } from 'react-router-dom';
+import Navbar from './Navbar';
 
 const Layout = () => {
   return (
-    <div className="min-h-screen w-full bg-[url('/bg-veg.jpg')] bg-cover bg-fixed bg-no-repeat bg-center">
-      <div className="backdrop-blur-sm bg-white/70 min-h-screen">
+    <div className="w-screen h-screen overflow-x-hidden bg-[url('/about/veg.jpg')] bg-cover bg-center bg-fixed">
+      <div className="w-full h-full backdrop-blur-sm bg-white/80 flex flex-col">
         <Navbar />
-        <main className="max-w-7xl mx-auto px-4 py-6">
+        <main className="flex-1 w-full h-full overflow-y-auto px-6 py-8">
           <Outlet />
         </main>
       </div>

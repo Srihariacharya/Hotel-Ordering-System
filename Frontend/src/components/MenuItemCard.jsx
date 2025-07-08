@@ -16,7 +16,7 @@ const MenuItemCard = ({ item, qty, onQtyChange }) => (
           parseInt(e.target.value, 10) || 0
         )
       }
-      className="mt-2 w-20 p-1 border rounded bg-gray-200 text-center"
+      className="w-full px-4 py-6 border rounded bg-gray-200 text-center"
     />
   </div>
 );

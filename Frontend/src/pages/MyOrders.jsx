@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 
 const MyOrders = () => {
@@ -6,49 +6,53 @@ const MyOrders = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-
     if (!token) return;
 
     axios
       .get('/order', {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => {
-        setOrders(res.data.orders || []);
-      })
-      .catch((err) => {
-        console.error('Fetch orders failed:', err);
-      });
+      .then((res) => setOrders(res.data.orders || []))
+      .catch((err) => console.error('Fetch orders failed:', err));
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-800 p-6">
-      <h2 className="text-3xl font-bold mb-6 text-center">🧾 My Orders</h2>
+    <div className="w-full min-h-screen px-6 py-8">
+      <h1 className="text-3xl font-bold mb-6 text-green-900 flex items-center gap-2">
+        🧾 My Orders
+      </h1>
 
       {orders.length === 0 ? (
         <p className="text-center text-gray-500">No orders found.</p>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
           {orders.map((order) => (
             <div
               key={order._id}
-              className="bg-white shadow rounded p-4 border border-gray-300"
+              className="bg-white/90 p-4 rounded-lg shadow-md border border-green-200"
             >
               <div className="flex justify-between text-sm text-gray-600 mb-2">
                 <span>Order ID: {order._id}</span>
-                <span>Status: {order.status}</span>
+                <span>
+                  Status:{' '}
+                  <span className="text-green-700 font-medium">{order.status}</span>
+                </span>
               </div>
+
               <div className="text-sm mb-2">
-                Table #: <strong>{order.tableNumber}</strong>
+                Table Number:{' '}
+                <span className="font-semibold">{order.tableNumber}</span>
               </div>
-              <ul className="text-sm list-disc pl-5 text-gray-700">
-                {order.items.map((item, index) => (
-                  <li key={index}>
-                    {item.menuItem?.name || 'Item'} x {item.quantity}
+
+              <ul className="list-disc list-inside text-gray-800">
+                {order.items.map((item, idx) => (
+                  <li key={idx}>
+                    {item.menuItem?.name || 'Item'} × {item.quantity}
                   </li>
                 ))}
               </ul>
-              <div className="text-right mt-2 font-semibold">
+
+              <div className="mt-3 font-semibold text-right text-green-900">
                 Total: ₹{order.totalPrice}
               </div>
             </div>
