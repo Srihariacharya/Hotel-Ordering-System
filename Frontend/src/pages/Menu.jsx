@@ -1,25 +1,36 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import MenuItemCard from '../components/MenuItemCard';
 
-const categories = ['South Indian', 'North Indian', 'Snacks', 'Desserts', 'Beverages'];
-
 const Menu = () => {
   const [menuItems,   setMenuItems]   = useState([]);
-  const [category,    setCategory]    = useState('');
+  const [categories,  setCategories]  = useState([]);
   const [quantities,  setQuantities]  = useState({});
   const [total,       setTotal]       = useState(0);
   const [tableNumber, setTableNumber] = useState('');
 
-  /* fetch menu + attach JWT if present */
+  const [searchParams, setSP] = useSearchParams();
+  const activeCat = searchParams.get('c') || '';
+
+  /* fetch menu */
   useEffect(() => {
     const tok = localStorage.getItem('token');
     if (tok) axios.defaults.headers.common['Authorization'] = `Bearer ${tok}`;
-    axios.get('/menu').then(r => setMenuItems(r.data)).catch(console.error);
+
+    axios
+      .get('/menu')
+      .then(r => {
+        setMenuItems(r.data);
+        // build unique category list from data
+        setCategories([...new Set(r.data.map(i => i.category))]);
+      })
+      .catch(console.error);
   }, []);
 
-  /* filter items */
-  const displayed = menuItems.filter(i => !category || i.category === category);
+  const displayed = !activeCat
+    ? menuItems
+    : menuItems.filter(i => i.category === activeCat);
 
   /* qty helper */
   const handleQuantity = (id, price, qty) => {
@@ -49,33 +60,42 @@ const Menu = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert('Order placed ✔️');
-      setQuantities({}); setTotal(0); setTableNumber('');
+      setQuantities({});
+      setTotal(0);
+      setTableNumber('');
     } catch (e) {
-      console.error(e); alert(e.response?.data?.error || 'Order failed');
+      console.error(e);
+      alert(e.response?.data?.error || 'Order failed');
     }
+  };
+
+  /* handle category click */
+  const toggleCat = c => {
+    if (c === activeCat) setSP({});
+    else setSP({ c });
   };
 
   return (
     <div className="w-full px-4 py-6">
       <h1 className="text-3xl font-bold mb-6 text-center">Menu</h1>
 
-      {/* category buttons */}
+      {/* category chips */}
       <div className="flex flex-wrap gap-2 justify-center mb-6">
         {categories.map(c => (
-          <button
+         <button
             key={c}
-            onClick={() => setCategory(c === category ? '' : c)}
+            onClick={() => toggleCat(c)}
             className={`px-4 py-1 rounded-full border
-              ${c === category
-                ? 'bg-green-600 text-white border-green-600'
-                : 'bg-white hover:bg-green-100 border-green-300'}`}
-          >
-            {c}
-          </button>
+            ${c === activeCat
+            ? 'bg-green-600 text-white border-green-600'
+            : 'bg-white text-black hover:bg-green-100 border-green-300'}`}
+           >
+        {c}
+        </button>
         ))}
       </div>
 
-      {/* table # */}
+      {/* table number */}
       <div className="mb-6 text-center">
         <label className="mr-2 font-medium">Table Number</label>
         <input
@@ -87,8 +107,8 @@ const Menu = () => {
         />
       </div>
 
-      {/* menu grid */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-10">
+      {/* items grid */}
+      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(220px,1fr))] text-gray-900">
         {displayed.map(item => (
           <MenuItemCard
             key={item._id}
@@ -104,8 +124,10 @@ const Menu = () => {
         )}
       </div>
 
-      {/* total + btn */}
-      <div className="mt-6 text-xl font-semibold text-center">Total: ₹{total}</div>
+      {/* total & checkout */}
+      <div className="mt-6 text-xl font-semibold text-center">
+        Total: ₹{total}
+      </div>
       <div className="mt-4 text-center">
         <button
           onClick={handlePlaceOrder}

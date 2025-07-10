@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { Menu, X, ShoppingCart } from 'lucide-react';
+import { Menu, X, ShoppingCart, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
   const { cartItems } = useCart();
+ const { dark, toggle } = useTheme();
   const navigate = useNavigate();
 
   const links = [
@@ -47,15 +49,21 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-veg-700 text-veg-100 shadow-md sticky top-0 z-50">
-      <div className="w-full px-4 py-6">
-        <div className="flex h-16 items-center justify-between">
+   <nav className="bg-white text-black dark:bg-gray-900 dark:text-white">
+      <div className="w-full px-4 py-4">
+        <div className="flex items-center justify-between h-16">
+          
+          {/* Logo */}
           <Link to="/" className="flex items-center gap-2 font-bold text-xl">
             <span className="text-veg-50">HotelOrder</span>
           </Link>
 
-          <div className="hidden md:flex space-x-4">{renderLinks()}</div>
+          {/* Desktop Links */}
+          <div className="hidden md:flex space-x-4 items-center">
+            {renderLinks()}
+          </div>
 
+          {/* Desktop Right: Cart + Auth + Theme */}
           <div className="hidden md:flex items-center gap-4">
             <Link to="/cart" className="relative flex items-center">
               <ShoppingCart className="h-6 w-6" />
@@ -92,8 +100,16 @@ const Navbar = () => {
                 </Link>
               </>
             )}
+
+            <button
+              onClick={toggle}
+              className="rounded-full p-2 hover:bg-gray-200 dark:hover:bg-gray-700"
+            >
+              {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
           </div>
 
+          {/* Mobile Menu Toggle */}
           <button
             className="inline-flex items-center justify-center md:hidden"
             onClick={() => setOpen(!open)}
@@ -103,13 +119,14 @@ const Navbar = () => {
         </div>
       </div>
 
+      {/* Mobile Menu */}
       {open && (
-        <div className="md:hidden px-2 pt-2 pb-3 space-y-1 bg-veg-700/95 backdrop-blur">
+       <div className="md:hidden px-4 pt-2 pb-4 bg-green-700/95 dark:bg-gray-900/95 backdrop-blur space-y-2">
           {renderLinks()}
           <Link
             to="/cart"
-            className="flex items-center px-3 py-2 rounded-md text-sm font-medium hover:bg-veg-600/20"
             onClick={() => setOpen(false)}
+            className="flex items-center px-3 py-2 rounded-md text-sm font-medium hover:bg-veg-600/20"
           >
             <ShoppingCart className="h-5 w-5 mr-2" />
             Cart ({cartItems.length})
@@ -143,6 +160,16 @@ const Navbar = () => {
               </Link>
             </>
           )}
+
+          {/* Theme Toggle in mobile */}
+          <div className="flex justify-end pr-3">
+            <button
+              onClick={toggle}
+              className="rounded-full p-2 hover:bg-gray-200 dark:hover:bg-gray-700"
+            >
+              {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
       )}
     </nav>
