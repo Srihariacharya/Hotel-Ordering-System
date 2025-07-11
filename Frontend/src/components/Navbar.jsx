@@ -9,7 +9,7 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
   const { cartItems } = useCart();
- const { dark, toggle } = useTheme();
+  const { dark, toggle } = useTheme();
   const navigate = useNavigate();
 
   const links = [
@@ -49,13 +49,12 @@ const Navbar = () => {
   };
 
   return (
-   <nav className="bg-white text-black dark:bg-gray-900 dark:text-white">
+    <nav className="bg-veg-700 text-veg-100 dark:bg-gray-900 dark:text-white shadow-md sticky top-0 z-50">
       <div className="w-full px-4 py-4">
         <div className="flex items-center justify-between h-16">
-          
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-            <span className="text-veg-50">HotelOrder</span>
+            <span className="text-veg-50 dark:text-white">HotelOrder</span>
           </Link>
 
           {/* Desktop Links */}
@@ -104,6 +103,7 @@ const Navbar = () => {
             <button
               onClick={toggle}
               className="rounded-full p-2 hover:bg-gray-200 dark:hover:bg-gray-700"
+              title="Toggle Theme"
             >
               {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
@@ -121,7 +121,7 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       {open && (
-       <div className="md:hidden px-4 pt-2 pb-4 bg-green-700/95 dark:bg-gray-900/95 backdrop-blur space-y-2">
+        <div className="md:hidden px-4 pt-2 pb-4 bg-veg-700 dark:bg-gray-900 backdrop-blur space-y-2">
           {renderLinks()}
           <Link
             to="/cart"
@@ -161,7 +161,6 @@ const Navbar = () => {
             </>
           )}
 
-          {/* Theme Toggle in mobile */}
           <div className="flex justify-end pr-3">
             <button
               onClick={toggle}

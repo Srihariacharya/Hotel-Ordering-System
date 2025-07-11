@@ -1,76 +1,80 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import MenuItemCard from '../components/MenuItemCard';
 
 const Menu = () => {
-  const [menuItems,   setMenuItems]   = useState([]);
-  const [categories,  setCategories]  = useState([]);
-  const [quantities,  setQuantities]  = useState({});
-  const [total,       setTotal]       = useState(0);
+  const [menuItems, setMenuItems] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [quantities, setQuantities] = useState({});
+  const [total, setTotal] = useState(0);
   const [tableNumber, setTableNumber] = useState('');
 
   const [searchParams, setSP] = useSearchParams();
   const activeCat = searchParams.get('c') || '';
 
-  /* fetch menu */
+  // 🥗 Fetch menu items
   useEffect(() => {
-    const tok = localStorage.getItem('token');
-    if (tok) axios.defaults.headers.common['Authorization'] = `Bearer ${tok}`;
+    const fetchMenu = async () => {
+      try {
+        const res = await api.get('/menu');
+        setMenuItems(res.data);
 
-    axios
-      .get('/menu')
-      .then(r => {
-        setMenuItems(r.data);
-        // build unique category list from data
-        setCategories([...new Set(r.data.map(i => i.category))]);
-      })
-      .catch(console.error);
+        const uniqueCats = [...new Set(res.data.map(i => i.category))];
+        setCategories(uniqueCats);
+      } catch (err) {
+        console.error('❌ Error loading menu:', err);
+      }
+    };
+    fetchMenu();
   }, []);
 
   const displayed = !activeCat
     ? menuItems
     : menuItems.filter(i => i.category === activeCat);
 
-  /* qty helper */
+  // 🧮 Handle quantity change
   const handleQuantity = (id, price, qty) => {
-    const q = { ...quantities };
-    if (qty) q[id] = { quantity: qty, price };
-    else delete q[id];
-    setQuantities(q);
-    setTotal(Object.values(q).reduce((s, v) => s + v.price * v.quantity, 0));
+    const updated = { ...quantities };
+    if (qty) updated[id] = { quantity: qty, price };
+    else delete updated[id];
+
+    setQuantities(updated);
+    setTotal(Object.values(updated).reduce((sum, item) => sum + item.price * item.quantity, 0));
   };
 
-  /* place order */
+  // 🧾 Place Order
   const handlePlaceOrder = async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) return alert('Login first');
     if (!tableNumber) return alert('Enter table number');
 
     const items = Object.entries(quantities).map(([id, o]) => ({
       menuItem: id,
       quantity: o.quantity,
-      price:    o.price,
+      price: o.price,
     }));
 
     try {
-      await axios.post(
+      await api.post(
         '/order',
         { tableNumber: Number(tableNumber), items },
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
-      alert('Order placed ✔️');
+
+      alert('✅ Order placed');
       setQuantities({});
       setTotal(0);
       setTableNumber('');
     } catch (e) {
-      console.error(e);
+      console.error('❌ Order failed:', e);
       alert(e.response?.data?.error || 'Order failed');
     }
   };
 
-  /* handle category click */
-  const toggleCat = c => {
+  const toggleCat = (c) => {
     if (c === activeCat) setSP({});
     else setSP({ c });
   };
@@ -79,37 +83,39 @@ const Menu = () => {
     <div className="w-full px-4 py-6">
       <h1 className="text-3xl font-bold mb-6 text-center">Menu</h1>
 
-      {/* category chips */}
+      {/* Category Buttons */}
       <div className="flex flex-wrap gap-2 justify-center mb-6">
-        {categories.map(c => (
-         <button
+        {categories.map((c) => (
+          <button
             key={c}
             onClick={() => toggleCat(c)}
-            className={`px-4 py-1 rounded-full border
-            ${c === activeCat
-            ? 'bg-green-600 text-white border-green-600'
-            : 'bg-white text-black hover:bg-green-100 border-green-300'}`}
-           >
-        {c}
-        </button>
+            className={`px-4 py-1 rounded-full border transition
+              ${
+                c === activeCat
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-black hover:bg-green-100 border-green-300 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700'
+              }`}
+          >
+            {c}
+          </button>
         ))}
       </div>
 
-      {/* table number */}
+      {/* Table Number Input */}
       <div className="mb-6 text-center">
         <label className="mr-2 font-medium">Table Number</label>
         <input
           value={tableNumber}
-          onChange={e => setTableNumber(e.target.value)}
+          onChange={(e) => setTableNumber(e.target.value)}
           type="text"
-          className="px-3 py-1 rounded bg-gray-800 text-white"
           placeholder="Enter Table Number"
+          className="px-3 py-1 rounded border border-gray-500 dark:bg-gray-800 dark:text-white"
         />
       </div>
 
-      {/* items grid */}
-      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(220px,1fr))] text-gray-900">
-        {displayed.map(item => (
+      {/* Menu Items */}
+      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(220px,1fr))] text-gray-900 dark:text-white">
+        {displayed.map((item) => (
           <MenuItemCard
             key={item._id}
             item={item}
@@ -117,6 +123,7 @@ const Menu = () => {
             onQtyChange={handleQuantity}
           />
         ))}
+
         {displayed.length === 0 && (
           <p className="col-span-full text-center text-gray-500">
             No items for this category.
@@ -124,18 +131,21 @@ const Menu = () => {
         )}
       </div>
 
-      {/* total & checkout */}
+      {/* Total + Place Order */}
       <div className="mt-6 text-xl font-semibold text-center">
         Total: ₹{total}
       </div>
+
       <div className="mt-4 text-center">
         <button
           onClick={handlePlaceOrder}
           disabled={!total || !tableNumber}
           className={`px-4 py-2 rounded font-semibold
-            ${!total || !tableNumber
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-700 text-white'}`}
+            ${
+              !total || !tableNumber
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
         >
           Place Order
         </button>

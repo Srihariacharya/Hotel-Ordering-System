@@ -2,6 +2,23 @@
 const User   = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
+const generateTokens = require('../utils/generateTokens');
+
+// inside loginUser controller
+const { accessToken, refreshToken } = generateTokens(user);
+
+// send both tokens in response
+res.json({
+  user: {
+    id: user._id,
+    name: user.name,
+    role: user.role,
+    isAdmin: user.isAdmin,
+  },
+  accessToken,
+  refreshToken,
+});
+
 
 /* --------------------------------------------------------------
    POST /auth/register  – create a new user

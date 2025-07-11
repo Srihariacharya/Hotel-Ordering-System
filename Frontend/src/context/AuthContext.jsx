@@ -1,50 +1,79 @@
+// src/context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode'; // ✅ make sure this is installed: npm i jwt-decode
+import { jwtDecode } from 'jwt-decode'; 
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null); // <-- just start with null
-
-  // ✅ useEffect to restore user from localStorage on app load
-  useEffect(() => {
-    const token = localStorage.getItem('token');
+  const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem('user');
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
 
-    if (token && storedUser) {
+  const getToken = () => localStorage.getItem('accessToken');
+  const getRefreshToken = () => localStorage.getItem('refreshToken');
+
+  const login = (userData, accessToken, refreshToken) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    setUser(userData);
+  };
+
+  const logout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    setUser(null);
+  };
+
+  // ✅  Silently refresh access token before it expires
+  useEffect(() => {
+    const refreshAccessToken = async () => {
+      try {
+        const res = await fetch('/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: getRefreshToken() }),
+        });
+
+        if (!res.ok) throw new Error('Refresh failed');
+        const data = await res.json();
+
+        // Update localStorage and state
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+
+      } catch (err) {
+        console.error('❌ Token refresh failed:', err.message);
+        logout(); // log user out if refresh fails
+      }
+    };
+
+    const scheduleRefresh = () => {
+      const token = getToken();
+      if (!token) return;
+
       try {
         const decoded = jwtDecode(token);
-        const isExpired = decoded.exp * 1000 < Date.now();
+        const exp = decoded.exp * 1000; // convert to ms
+        const timeout = exp - Date.now() - 30 * 1000; // 30 sec before expiry
 
-        if (!isExpired) {
-          setUser(JSON.parse(storedUser));
+        if (timeout > 0) {
+          setTimeout(refreshAccessToken, timeout);
         } else {
-          logout();
+          refreshAccessToken();
         }
       } catch (err) {
-        console.error('Invalid token:', err);
+        console.error('❌ Token decode failed:', err.message);
         logout();
       }
-    }
-  }, []); // ← run only once when app loads
+    };
 
-  // ✅ called when user logs in
-  function login(userData, token) {
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('token', token);
-    setUser(userData);
-  }
-
-  // ✅ called when user logs out or token expires
-  function logout() {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    setUser(null);
-  }
-
-  function getToken() {
-    return localStorage.getItem('token');
-  }
+    scheduleRefresh();
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, getToken }}>
