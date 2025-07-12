@@ -9,7 +9,7 @@ const MenuItemCard = ({ item, qty = 0, onQtyChange }) => {
 
   return (
     <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-4 shadow-sm transition">
-      <h3 className="text-xl font-semibold mb-2 text-green-800 dark:text-green-300">
+      <  h3 className="text-xl font-semibold mb-2 text-green-800 dark:text-green-300">
         {item.name}
       </h3>
       <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
