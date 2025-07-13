@@ -101,18 +101,6 @@ const Menu = () => {
         ))}
       </div>
 
-      {/* Table Number Input */}
-      <div className="mb-6 text-center">
-        <label className="mr-2 font-medium">Table Number</label>
-        <input
-          value={tableNumber}
-          onChange={(e) => setTableNumber(e.target.value)}
-          type="text"
-          placeholder="Enter Table Number"
-          className="px-3 py-1 rounded border border-gray-500 dark:bg-gray-800 dark:text-white"
-        />
-      </div>
-
       {/* Menu Items */}
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(220px,1fr))] text-gray-900 dark:text-white">
         {displayed.map((item) => (
@@ -130,32 +118,7 @@ const Menu = () => {
           </p>
         )}
       </div>
-
-      {/* Total + Place Order */}
-      <div className="mt-6 text-xl font-semibold text-center">
-        Total: ₹{total}
-      </div>
-
-      <div className="mt-4 text-center">
-        <button
-          onClick={handlePlaceOrder}
-          disabled={!total || !tableNumber}
-          className={`px-4 py-2 rounded font-semibold
-            ${
-              !total || !tableNumber
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-green-600 hover:bg-green-700 text-white'
-            }`}
-        >
-          Place Order
-        </button>
-      </div>
-
-      <div className="mt-6 text-center">
-        <a href="/myorders" className="text-green-600 hover:underline">
-          View My Orders
-        </a>
-      </div>
+      
     </div>
   );
 };

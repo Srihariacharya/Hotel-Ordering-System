@@ -1,78 +1,98 @@
 // src/pages/Login.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
-const Login = () => {
-  const [email, setEmail]       = useState('');
+
+export default function Login() {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
-      const res = await axios.post('/auth/login', {
+      const res = await api.post('/auth/login', {
         email: email.trim().toLowerCase(),
         password: password.trim(),
       });
 
-      // ✅ Store both access and refresh tokens
-      localStorage.setItem('accessToken', res.data.accessToken);
-      localStorage.setItem('refreshToken', res.data.refreshToken);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      const { user, accessToken, refreshToken } = res.data;
 
-      navigate('/');
+      // Save user and tokens
+      login(user, accessToken, refreshToken);
+
+      // Optionally show a toast (if you have toast system)
+      // toast.success(`Welcome ${user.name}`);
+
+      // Redirect based on role
+      if (user.role === 'admin') {
+        navigate('/admin/orders');
+      } else {
+        navigate('/menu');
+      }
     } catch (err) {
-      console.error('Login error:', err);
-      alert(err.response?.data?.message || 'Login failed');
+      const message =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Login failed. Please try again.';
+      alert(message);
+      console.error('❌ Login error:', message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white px-4">
       <form
         onSubmit={handleLogin}
-        className="w-full max-w-sm bg-gray-800 p-8 rounded-lg shadow-md"
+        className="w-full max-w-sm bg-gray-800 p-8 rounded-lg shadow-lg"
       >
-        <h2 className="text-3xl font-bold mb-6 text-white text-center">Login</h2>
+        <h2 className="text-3xl font-bold mb-6 text-center">Login</h2>
 
         <label className="block mb-4">
-          <span className="block text-sm font-medium text-white">Email</span>
+          <span className="block text-sm font-medium mb-1">Email</span>
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full px-3 py-2 border border-gray-600 rounded bg-gray-700 text-white"
+            placeholder="admin@example.com"
+            className="w-full px-3 py-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </label>
 
         <label className="block mb-6">
-          <span className="block text-sm font-medium text-white">Password</span>
+          <span className="block text-sm font-medium mb-1">Password</span>
           <input
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full px-3 py-2 border border-gray-600 rounded bg-gray-700 text-white"
+            placeholder="Enter your password"
+            className="w-full px-3 py-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </label>
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-semibold"
+          disabled={loading}
+          className={`w-full py-2 rounded font-semibold transition-colors ${
+            loading
+              ? 'bg-green-400 cursor-not-allowed'
+              : 'bg-green-600 hover:bg-green-700'
+          }`}
         >
-          Log In
+          {loading ? 'Logging in...' : 'Log In'}
         </button>
-
-        <p className="text-center text-sm mt-4 text-white">
-          Don't have an account?{' '}
-          <a href="/register" className="text-blue-400 hover:underline">Sign Up</a>
-        </p>
       </form>
     </div>
   );
-};
-
-export default Login;
+}

@@ -1,38 +1,52 @@
+// models/User.js
 
 const mongoose = require('mongoose');
-const bcrypt   = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema(
   {
-    name:  { type: String, trim: true, default: '' },
-
+    name: {
+      type: String,
+      required: [true, 'Name is required'],
+      trim: true,
+    },
     email: {
       type: String,
-      required: true,
+      required: [true, 'Email is required'],
       unique: true,
       lowercase: true,
       trim: true,
     },
-
-    password: { type: String, required: true },
-
+    password: {
+      type: String,
+      required: [true, 'Password is required'],
+      minlength: 6,
+    },
     role: {
       type: String,
-      enum: ['admin', 'waiter'], 
-      default: 'waiter',
+      enum: ['user', 'admin'],
+      default: 'user',
     },
   },
   { timestamps: true }
 );
 
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password.trim(), 10);
-  next();
+// ✅ Virtual field for admin check
+userSchema.virtual('isAdmin').get(function () {
+  return this.role === 'admin';
 });
 
-userSchema.methods.comparePassword = function (plain) {
-  return bcrypt.compare(plain.trim(), this.password);
-};
+// ✅ Hash password before saving
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = mongoose.model('User', userSchema);

@@ -23,7 +23,7 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    totalPrice: {
+    totalAmount: {  // ✅ changed from totalPrice → totalAmount
       type: Number,
       required: true,
     },

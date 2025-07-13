@@ -21,9 +21,8 @@ const Cart = () => {
   }
 
   return (
-    <section className="w-full px-4 py-6">
-      <h1 className="text-3xl font-bold mb-6">My Cart</h1>
-
+   <div className="min-h-screen px-4 py-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-600">
+  <h1 className="text-3xl font-bold mb-4 text-center">My Cart</h1>
       <div className="space-y-4">
         {cartItems.map(item => (
           <div
@@ -49,8 +48,7 @@ const Cart = () => {
 
       <div className="mt-8 p-6 bg-gray-50 rounded-lg shadow-inner">
         <div className="flex justify-between text-lg font-medium mb-4">
-          <span>Total</span>
-          <span>₹{cartTotal}</span>
+          <span>₹Total: {cartTotal.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
         </div>
         <div className="flex gap-4">
           <button
@@ -67,7 +65,7 @@ const Cart = () => {
           </button>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 

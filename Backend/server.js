@@ -1,23 +1,34 @@
-/* ------------------------------------------------------------------
-   server.js  –  Main entry for Hotel‑Ordering backend
------------------------------------------------------------------- */
+require('dotenv').config();
+const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
+const connectDB = require('./config/db');
+connectDB();
 
-require('dotenv').config();              // Load .env first
+// ✅ TEMPORARY ADMIN SEED
+const bcrypt = require('bcryptjs');
+const User = require('./models/User');
+(async () => {
+  try {
+    const existingAdmin = await User.findOne({ email: 'admin@example.com' });
+    if (!existingAdmin) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await User.create({
+        name: 'Admin',
+        email: 'admin@example.com',
+        password: hashedPassword,
+        role: 'admin',
+      });
+      console.log('✅ Default admin created: admin@example.com / admin123');
+    } else {
+      console.log('⚠️ Admin already exists');
+    }
+  } catch (err) {
+    console.error('❌ Admin seeding error:', err.message);
+  }
+})();
 
-const express     = require('express');
-const helmet      = require('helmet');
-const cors        = require('cors');
-const rateLimit   = require('express-rate-limit');
-const connectDB   = require('./config/db');   // <- your mongoose helper
-
-/* -------------------------------------------------
-   1. Connect to MongoDB   (ONE time only!)
-------------------------------------------------- */
-connectDB();  // handles its own success / failure log
-
-/* -------------------------------------------------
-   2. Create the Express app
-------------------------------------------------- */
 const app = express();
 
 /* -------------------------------------------------

@@ -1,13 +1,12 @@
-// src/pages/MyOrders.jsx
 import { useEffect, useState } from 'react';
-import api from '../api/axios'; // ✅ use this consistently
+import api from '../api/axios';
 
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken'); // ✅ use accessToken if that's your naming
+    const token = localStorage.getItem('accessToken');
     if (!token) {
       setLoading(false);
       return;
@@ -19,8 +18,6 @@ const MyOrders = () => {
       })
       .then((res) => {
         console.log('📦 Orders Response:', res.data);
-
-        // ✅ FIX: ensure it's an array
         if (Array.isArray(res.data)) {
           setOrders(res.data);
         } else {
@@ -45,12 +42,12 @@ const MyOrders = () => {
 
   return (
     <div className="w-full min-h-screen px-6 py-8">
-      <h1 className="text-3xl font-bold mb-6 text-green-900 flex items-center gap-2">
+      <h1 className="text-3xl font-bold mb-6 text-green-900 dark:text-green-300 flex items-center gap-2">
         🧾 My Orders
       </h1>
 
       {orders.length === 0 ? (
-        <p className="text-center text-gray-500">No orders found.</p>
+        <p className="text-center text-gray-500 dark:text-gray-400">No orders found.</p>
       ) : (
         <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
           {orders.map((order) => (
@@ -74,7 +71,7 @@ const MyOrders = () => {
                 </p>
               </div>
 
-              <ul className="list-disc list-inside text-gray-800 dark:text-gray-200">
+              <ul className="list-disc list-inside text-gray-800 dark:text-gray-200 text-sm">
                 {order.items.map((item, idx) => (
                   <li key={idx}>
                     {item.menuItem?.name || 'Item'} × {item.quantity}
@@ -83,8 +80,20 @@ const MyOrders = () => {
               </ul>
 
               <div className="mt-3 font-semibold text-right text-green-900 dark:text-green-300">
-                Total: ₹{order.totalPrice}
+               Total: ₹{(order.totalAmount || 0).toLocaleString('en-IN')}
+
               </div>
+
+              {order.status === 'served' && (
+                <div className="mt-3 text-right">
+                  <a
+                    href={`/invoice/${order._id}`}
+                    className="text-blue-600 dark:text-blue-400 underline text-sm hover:text-blue-800"
+                  >
+                    View Invoice
+                  </a>
+                </div>
+              )}
             </div>
           ))}
         </div>

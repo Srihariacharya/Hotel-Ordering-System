@@ -1,6 +1,6 @@
 // src/context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode'; 
+import { jwtDecode } from 'jwt-decode';
 
 const AuthContext = createContext();
 
@@ -13,11 +13,20 @@ export function AuthProvider({ children }) {
   const getToken = () => localStorage.getItem('accessToken');
   const getRefreshToken = () => localStorage.getItem('refreshToken');
 
+  const enhanceUser = (rawUser) => {
+    return {
+      ...rawUser,
+      isAdmin: rawUser?.role === 'admin', // ✅ Add isAdmin flag
+    };
+  };
+
   const login = (userData, accessToken, refreshToken) => {
-    localStorage.setItem('user', JSON.stringify(userData));
+    const enhancedUser = enhanceUser(userData);
+
+    localStorage.setItem('user', JSON.stringify(enhancedUser));
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
-    setUser(userData);
+    setUser(enhancedUser);
   };
 
   const logout = () => {
@@ -27,7 +36,7 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  // ✅  Silently refresh access token before it expires
+  // ✅ Silent token refresh
   useEffect(() => {
     const refreshAccessToken = async () => {
       try {
@@ -40,15 +49,14 @@ export function AuthProvider({ children }) {
         if (!res.ok) throw new Error('Refresh failed');
         const data = await res.json();
 
-        // Update localStorage and state
+        const enhancedUser = enhanceUser(data.user);
         localStorage.setItem('accessToken', data.accessToken);
         localStorage.setItem('refreshToken', data.refreshToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
-
+        localStorage.setItem('user', JSON.stringify(enhancedUser));
+        setUser(enhancedUser);
       } catch (err) {
         console.error('❌ Token refresh failed:', err.message);
-        logout(); // log user out if refresh fails
+        logout();
       }
     };
 
@@ -59,7 +67,7 @@ export function AuthProvider({ children }) {
       try {
         const decoded = jwtDecode(token);
         const exp = decoded.exp * 1000; // convert to ms
-        const timeout = exp - Date.now() - 30 * 1000; // 30 sec before expiry
+        const timeout = exp - Date.now() - 30 * 1000; // 30s before expiry
 
         if (timeout > 0) {
           setTimeout(refreshAccessToken, timeout);
@@ -73,7 +81,7 @@ export function AuthProvider({ children }) {
     };
 
     scheduleRefresh();
-  }, []);
+  }, []); // Run once on mount
 
   return (
     <AuthContext.Provider value={{ user, login, logout, getToken }}>

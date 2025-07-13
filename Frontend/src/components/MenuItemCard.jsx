@@ -1,35 +1,60 @@
-// src/components/MenuItemCard.jsx
-import React from 'react';
+import React, { useState } from 'react';
+import { useCart } from '../context/CartContext';
 
-const MenuItemCard = ({ item, qty = 0, onQtyChange }) => {
-  const handleQtyChange = (e) => {
-    const value = parseInt(e.target.value);
-    onQtyChange(item._id, item.price, isNaN(value) ? 0 : value);
+const MenuItemCard = ({ item }) => {
+  const { cartItems, addToCart, removeFromCart } = useCart();
+  const inCart = cartItems.find(i => i._id === item._id);
+  const [qty, setQty] = useState(inCart?.qty || 1);
+
+  const handleAdd = () => {
+    if (qty <= 0) return alert("Quantity must be at least 1");
+    for (let i = 0; i < qty; i++) {
+      addToCart(item);
+    }
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-4 shadow-sm transition">
-      <  h3 className="text-xl font-semibold mb-2 text-green-800 dark:text-green-300">
-        {item.name}
-      </h3>
-      <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
-        ₹{item.price} — {item.category}
-      </p>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        {item.description}
+    <div className="p-4 bg-white dark:bg-gray-800 rounded shadow-md">
+      <img
+        src={item.image || '/no-image.png'}
+        alt={item.name}
+        className="w-full h-36 object-cover mb-3 rounded"
+      />
+
+      <h3 className="font-bold text-lg text-gray-900 dark:text-white">{item.name}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-300">{item.category}</p>
+      <p className="font-bold text-green-700 dark:text-green-400">
+        ₹{item.price.toLocaleString('en-IN')}
       </p>
 
-      <div className="flex items-center gap-3">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
-          Qty:
-        </label>
+      {/* Quantity Selector */}
+      <div className="mt-2 flex items-center gap-2">
+        <label className="text-sm text-gray-800 dark:text-gray-200">Qty:</label>
         <input
           type="number"
-          min="0"
+          min="1"
           value={qty}
-          onChange={handleQtyChange}
-          className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-500 rounded bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"
+          onChange={e => setQty(Number(e.target.value))}
+          className="w-16 px-2 py-1 rounded border border-gray-400 dark:bg-gray-700 dark:text-white"
         />
+      </div>
+
+      <div className="mt-3">
+        {!inCart ? (
+          <button
+            onClick={handleAdd}
+            className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 w-full"
+          >
+            Add to Cart
+          </button>
+        ) : (
+          <button
+            onClick={() => removeFromCart(item._id)}
+            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 w-full"
+          >
+            Remove from Cart
+          </button>
+        )}
       </div>
     </div>
   );
