@@ -102,7 +102,15 @@ html.dark body::before {
     color: black !important;
   }
 
-  button, .print\\:hidden {
+  .print\:bg-white {
+    background: white !important;
+  }
+
+  .print\:text-black {
+    color: black !important;
+  }
+
+  button {
     display: none !important;
   }
 }
