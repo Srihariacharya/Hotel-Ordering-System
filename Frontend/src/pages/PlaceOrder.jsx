@@ -11,13 +11,14 @@ export default function PlaceOrder() {
 
   const [tableNumber, setTableNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false); // ✅ New flag
 
-  // Redirect to cart if empty
+  // ✅ Move redirect to useEffect so it doesn't run before render
   useEffect(() => {
-    if (cartItems.length === 0) {
+    if (cartItems.length === 0 && !orderPlaced) {
       navigate('/cart');
     }
-  }, [cartItems, navigate]);
+  }, [cartItems, orderPlaced, navigate]);
 
   async function handlePlaceOrder(e) {
     e.preventDefault();
@@ -27,37 +28,27 @@ export default function PlaceOrder() {
       return;
     }
 
-    // Defensive check for cart item format
-    const items = cartItems.map(i => {
-      if (!i._id || !i.qty || i.price === undefined) {
-        throw new Error('Invalid cart item structure');
-      }
-      return {
+    const orderData = {
+      items: cartItems.map(i => ({
         menuItem: i._id,
         quantity: i.qty,
         price: i.price,
-      };
-    });
-
-    const orderData = {
-      items,
+      })),
       tableNumber: Number(tableNumber),
       totalAmount: cartTotal,
     };
 
     try {
       setLoading(true);
-      console.log('📦 Submitting order:', orderData);
-
       await api.post('/order', orderData, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
-
       clearCart();
-      navigate('/myorders');
+      setOrderPlaced(true); // ✅ Prevent redirect to /cart
+      navigate('/order/success'); // ✅ Show confirmation
     } catch (err) {
       console.error('❌ Order failed:', err);
-      alert(err.response?.data?.error || 'Order failed. Please try again.');
+      alert(err.response?.data?.error || 'Order failed');
     } finally {
       setLoading(false);
     }
@@ -73,7 +64,7 @@ export default function PlaceOrder() {
         {cartItems.map(i => (
           <li key={i._id} className="flex justify-between border-b pb-1">
             <span>{i.name} × {i.qty}</span>
-            <span>₹{(i.price * i.qty).toFixed(2)}</span>
+            <span>₹{i.price * i.qty}</span>
           </li>
         ))}
       </ul>
@@ -94,7 +85,7 @@ export default function PlaceOrder() {
 
       <div className="flex justify-between text-lg font-semibold text-green-800 dark:text-green-300 mb-6">
         <span>Total</span>
-        <span>₹{cartTotal.toFixed(2)}</span>
+        <span>₹{cartTotal}</span>
       </div>
 
       <form onSubmit={handlePlaceOrder}>

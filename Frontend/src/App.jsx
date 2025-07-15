@@ -17,12 +17,12 @@ import MyOrders from './pages/MyOrders';
 import PlaceOrder from './pages/PlaceOrder';
 import AddItem from './pages/AddItem';
 import AdminOrders from './pages/AdminOrders';
+import OrderSuccess from './pages/OrderSuccess'; // ✅
 
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
-/* ---------- route guard ---------- */
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
@@ -30,13 +30,13 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   return children;
 };
 
-/* ---------- main app ---------- */
 export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <CartProvider>
           <Routes>
+            {/* Pages that use common layout */}
             <Route element={<Layout />}>
               <Route index element={<Home />} />
               <Route path="menu" element={<Menu />} />
@@ -71,10 +71,11 @@ export default function App() {
               />
             </Route>
 
-            {/* auth routes (outside layout) */}
+            {/* ✅ Routes outside layout */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/invoice/:id" element={<Invoice />} />
+            <Route path="/order/success" element={<OrderSuccess />} />
 
             {/* catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />

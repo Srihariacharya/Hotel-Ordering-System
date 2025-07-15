@@ -1,5 +1,5 @@
 // routes/orderRoutes.js
-
+const Joi = require('joi');
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
@@ -8,26 +8,29 @@ const { protect } = require('../middleware/authMiddleware');
 // ==============================================
 // ✅ POST /order – Place a new order (User/Waiter)
 // ==============================================
+const orderSchema = Joi.object({
+  tableNumber: Joi.number().integer().min(1).required(),
+  items: Joi.array().items(
+    Joi.object({
+      menuItem: Joi.string().required(),
+      quantity: Joi.number().min(1).required(),
+      price: Joi.number().min(0).required(),
+    })
+  ).min(1).required(),
+  totalAmount: Joi.number().min(1).required()
+});
+
 router.post('/', protect(), async (req, res) => {
   try {
-    const { tableNumber, items } = req.body;
+    const { error } = orderSchema.validate(req.body);
+    if (error) return res.status(400).json({ error: error.details[0].message });
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'No items provided' });
-    }
-
-    if (!tableNumber) {
-      return res.status(400).json({ error: 'Table number is required' });
-    }
-
-     const totalAmount = items.reduce((total, item) => {
-      return total + item.quantity * item.price;
-    }, 0);
+    const { tableNumber, items, totalAmount } = req.body;
 
     const order = await Order.create({
-      items,
       tableNumber,
-      totalAmount,               // ✅ Correct field name
+      items,
+      totalAmount,
       orderedBy: req.user._id,
     });
 
