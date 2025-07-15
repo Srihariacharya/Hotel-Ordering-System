@@ -4,7 +4,10 @@ import { useParams } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
+
+// ✅ Register autoTable plugin
+jsPDF.API.autoTable = autoTable;
 
 export default function Invoice() {
   const { id } = useParams(); // order ID
@@ -27,43 +30,51 @@ export default function Invoice() {
   }, [id, getToken]);
 
   function downloadPDF() {
-    const doc = new jsPDF();
-    doc.text('Hotel Order Invoice', 14, 20);
-    doc.setFontSize(12);
-    doc.text(`Order ID: ${order._id}`, 14, 30);
-    doc.text(`Customer: ${order.orderedBy.name}`, 14, 38);
-    doc.text(`Table: ${order.tableNumber}`, 14, 46);
+  if (!order) return alert("Invoice not loaded");
 
-    const rows = order.items.map(i => [
-      i.menuItem?.name || 'Item',
-      i.quantity,
-      `₹${i.price}`,
-      `₹${i.quantity * i.price}`,
-    ]);
+  const doc = new jsPDF();
 
-    doc.autoTable({
-      head: [['Item', 'Qty', 'Price', 'Subtotal']],
-      body: rows,
-      startY: 60,
-    });
+  doc.setFontSize(16);
+  doc.text('Hotel Order Invoice', 14, 20);
 
-    doc.text(`Total: ₹${order.totalPrice}`, 14, doc.lastAutoTable.finalY + 10);
-    doc.save(`Invoice_${order._id}.pdf`);
-  }
+  doc.setFontSize(12);
+  doc.text(`Order ID: ${order._id}`, 14, 30);
+  doc.text(`Waiter: ${order.orderedBy.name}`, 14, 38);
+  doc.text(`Table Number: ${order.tableNumber}`, 14, 46);
+
+  const rows = order.items.map(i => [
+  i.menuItem?.name || 'Item',
+  i.quantity,
+  'INR ' + i.price,
+  'INR ' + (i.quantity * i.price).toFixed(2)
+  ]);
+
+  autoTable(doc, {
+    head: [['Item', 'Qty', 'Price', 'Subtotal']],
+    body: rows,
+    startY: 60,
+  });
+
+  const finalY = doc.lastAutoTable?.finalY || 80;
+  doc.setFontSize(14);
+  doc.text('Total: INR ' + (order.totalAmount?.toFixed(2) || '0.00'), 14, finalY + 10);
+
+  doc.save(`Invoice_${order._id}.pdf`);
+}
 
   if (!order) return <p className="p-8">Loading invoice...</p>;
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8 bg-white dark:bg-gray-900 shadow-md rounded">
-      <h2 className="text-3xl font-bold mb-4 text-green-800 dark:text-green-300">Order Invoice</h2>
+    <div className="max-w-3xl mx-auto px-6 py-8 bg-white text-black shadow-md rounded">
+      <h2 className="text-3xl font-bold mb-4 text-green-800">Order Invoice</h2>
 
       <p className="mb-2">Order ID: <strong>{order._id}</strong></p>
-      <p className="mb-2">Customer: {order.orderedBy.name}</p>
+      <p className="mb-2">Waiter: {order.orderedBy.name}</p>
       <p className="mb-2">Table Number: {order.tableNumber}</p>
 
       <table className="w-full border mt-4 text-left text-sm">
         <thead>
-          <tr className="bg-gray-200 dark:bg-gray-800">
+          <tr className="bg-gray-200">
             <th className="p-2 border">Item</th>
             <th className="p-2 border">Qty</th>
             <th className="p-2 border">Price</th>
@@ -76,15 +87,15 @@ export default function Invoice() {
               <td className="p-2 border">{i.menuItem?.name || 'Item'}</td>
               <td className="p-2 border">{i.quantity}</td>
               <td className="p-2 border">₹{i.price}</td>
-              <td className="p-2 border">₹{i.price * i.quantity}</td>
+              <td className="p-2 border">₹{(i.price * i.quantity).toFixed(2)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <div className="text-right text-lg font-semibold mt-4">
-        Total: ₹{order.totalPrice}
-      </div>
+      <p className="text-right font-bold text-lg mt-4">
+        Total Amount: ₹{order.totalAmount?.toFixed(2) || '0.00'}
+      </p>
 
       <div className="mt-6 text-center">
         <button
