@@ -12,13 +12,13 @@ const Navbar = () => {
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
 
-  // ✅ Added Admin Orders link here
   const links = [
     { to: '/', label: 'Home', private: false },
     { to: '/menu', label: 'Menu', private: false },
     { to: '/myorders', label: 'My Orders', private: true },
     { to: '/additem', label: 'Add Item', private: true, adminOnly: true },
-    { to: '/admin/orders', label: 'Admin Orders', private: true, adminOnly: true }, // ✅ New admin-only link
+    { to: '/admin/orders', label: 'Admin Orders', private: true, adminOnly: true },
+    { to: '/admin/analytics', label: 'Analytics', private: true, adminOnly: true }, // ✅ Admin-only Analytics
   ];
 
   const renderLinks = () =>

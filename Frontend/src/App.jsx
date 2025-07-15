@@ -1,9 +1,5 @@
 // src/App.jsx
-import {
-  Routes,
-  Route,
-  Navigate,
-} from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 import './index.css';
 import Invoice from './pages/Invoice';
@@ -17,7 +13,8 @@ import MyOrders from './pages/MyOrders';
 import PlaceOrder from './pages/PlaceOrder';
 import AddItem from './pages/AddItem';
 import AdminOrders from './pages/AdminOrders';
-import OrderSuccess from './pages/OrderSuccess'; // ✅
+import OrderSuccess from './pages/OrderSuccess'; 
+import AdminAnalytics from './pages/AdminAnalytics';
 
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -36,7 +33,8 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <Routes>
-            {/* Pages that use common layout */}
+
+            {/* ✅ Pages that use common layout */}
             <Route element={<Layout />}>
               <Route index element={<Home />} />
               <Route path="menu" element={<Menu />} />
@@ -69,6 +67,15 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+
+              <Route
+                path="admin/analytics"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <AdminAnalytics />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
             {/* ✅ Routes outside layout */}
@@ -77,7 +84,7 @@ export default function App() {
             <Route path="/invoice/:id" element={<Invoice />} />
             <Route path="/order/success" element={<OrderSuccess />} />
 
-            {/* catch all */}
+            {/* catch-all fallback route */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </CartProvider>

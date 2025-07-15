@@ -1,13 +1,12 @@
-// routes/orderRoutes.js
-const Joi = require('joi');
 const express = require('express');
 const router = express.Router();
+const Joi = require('joi');
 const Order = require('../models/Order');
 const { protect } = require('../middleware/authMiddleware');
 
-// ==============================================
-// ✅ POST /order – Place a new order (User/Waiter)
-// ==============================================
+// =====================================
+// ✅ Schema validation using Joi
+// =====================================
 const orderSchema = Joi.object({
   tableNumber: Joi.number().integer().min(1).required(),
   items: Joi.array().items(
@@ -20,6 +19,9 @@ const orderSchema = Joi.object({
   totalAmount: Joi.number().min(1).required()
 });
 
+// =====================================
+// ✅ POST /order – Place a new order
+// =====================================
 router.post('/', protect(), async (req, res) => {
   try {
     const { error } = orderSchema.validate(req.body);
@@ -41,9 +43,9 @@ router.post('/', protect(), async (req, res) => {
   }
 });
 
-// ===================================================
-// ✅ GET /order/my – Get current user's own orders
-// ===================================================
+// ==========================================
+// ✅ GET /order/my – Get user's own orders
+// ==========================================
 router.get('/my', protect(), async (req, res) => {
   try {
     const orders = await Order.find({ orderedBy: req.user._id })
@@ -57,9 +59,9 @@ router.get('/my', protect(), async (req, res) => {
   }
 });
 
-// ===================================================
-// ✅ GET /order/admin – Admin: Get all placed orders
-// ===================================================
+// ============================================
+// ✅ GET /order/admin – Admin: All placed orders
+// ============================================
 router.get('/admin', protect('admin'), async (req, res) => {
   try {
     const orders = await Order.find()
@@ -74,9 +76,9 @@ router.get('/admin', protect('admin'), async (req, res) => {
   }
 });
 
-// ==========================================================
-// ✅ PUT /order/:id/serve – Admin: Mark an order as served
-// ==========================================================
+// ===================================================
+// ✅ PUT /order/:id/serve – Admin marks order served
+// ===================================================
 router.put('/:id/serve', protect('admin'), async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -84,7 +86,6 @@ router.put('/:id/serve', protect('admin'), async (req, res) => {
 
     order.status = 'served';
     order.servedAt = new Date();
-
     await order.save();
 
     res.json({ message: 'Order marked as served', order });
@@ -94,9 +95,9 @@ router.put('/:id/serve', protect('admin'), async (req, res) => {
   }
 });
 
-// ===========================================================
+// ======================================================
 // ✅ GET /order/:id/invoice – View invoice after serving
-// ===========================================================
+// ======================================================
 router.get('/:id/invoice', protect(), async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
@@ -107,7 +108,6 @@ router.get('/:id/invoice', protect(), async (req, res) => {
 
     const isAdmin = req.user.role === 'admin';
     const isOwner = order.orderedBy._id.toString() === req.user._id.toString();
-
     if (!isAdmin && !isOwner) {
       return res.status(403).json({ error: 'Access denied' });
     }
@@ -120,6 +120,122 @@ router.get('/:id/invoice', protect(), async (req, res) => {
   } catch (err) {
     console.error('❌ Invoice error:', err.message);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ======================================================
+// ✅ GET /order/admin/analytics?start=&end=
+// Analytics per day + monthly + top-selling items
+// ======================================================
+router.get('/admin/analytics', protect('admin'), async (req, res) => {
+  try {
+    const { start, end } = req.query;
+
+    const matchStage = {};
+    if (start && end) {
+      matchStage.createdAt = {
+        $gte: new Date(start),
+        $lte: new Date(end),
+      };
+    } else {
+      // Default to last 15 days
+      const from = new Date();
+      from.setDate(from.getDate() - 15);
+      matchStage.createdAt = { $gte: from };
+    }
+
+    const dailyStats = await Order.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          totalOrders: { $sum: 1 },
+          dailyIncome: { $sum: '$totalAmount' },
+        },
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const monthlyIncome = await Order.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$totalAmount' },
+        },
+      },
+    ]);
+
+    const topItems = await Order.aggregate([
+      { $match: matchStage },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.menuItem',
+          quantitySold: { $sum: '$items.quantity' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'menuitems',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'menuItem',
+        },
+      },
+      { $unwind: '$menuItem' },
+      { $sort: { quantitySold: -1 } },
+      { $limit: 5 },
+    ]);
+
+    res.json({
+      dailyStats,
+      monthlyIncome: monthlyIncome[0]?.total || 0,
+      topItems,
+    });
+  } catch (err) {
+    console.error('Analytics Error:', err);
+    res.status(500).json({ error: 'Failed to fetch analytics' });
+  }
+});
+
+// ==================================================
+// ✅ GET /order/admin/top-items?days=15
+// Top selling items by quantity + revenue
+// ==================================================
+router.get('/admin/top-items', protect('admin'), async (req, res) => {
+  const days = parseInt(req.query.days) || 15;
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - days);
+
+  try {
+    const topItems = await Order.aggregate([
+      { $match: { createdAt: { $gte: fromDate } } },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.menuItem',
+          totalSold: { $sum: '$items.quantity' },
+          totalRevenue: { $sum: { $multiply: ['$items.quantity', '$items.price'] } },
+        },
+      },
+      {
+        $lookup: {
+          from: 'menuitems',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'menuItem',
+        },
+      },
+      { $unwind: '$menuItem' },
+      { $sort: { totalSold: -1 } },
+      { $limit: 10 },
+    ]);
+
+    res.json(topItems);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch top-selling items' });
   }
 });
 
