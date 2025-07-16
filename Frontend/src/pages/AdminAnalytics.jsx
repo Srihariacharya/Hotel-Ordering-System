@@ -64,23 +64,22 @@ export default function AdminAnalytics() {
 
       {/* 🍲 Top-Selling Items Table */}
      <h3 className="text-xl font-semibold text-green-700 mb-2">🍲 Top Selling Items</h3>
-<table className="w-full text-left border shadow-md rounded overflow-hidden">
-  <thead className="bg-green-100 text-green-900 font-semibold">
-    <tr>
-      <th className="p-2 border">Item</th>
-      <th className="p-2 border">Quantity Sold</th>
-    </tr>
-  </thead>
-  <tbody>
-    {analytics.topItems.map((item, idx) => (
-      <tr key={idx} className="odd:bg-white even:bg-green-50 text-gray-800">
+     <table className="w-full text-left border shadow-md rounded overflow-hidden">
+      <thead className="bg-green-100 text-green-900 font-semibold">
+       <tr>
+         <th className="p-2 border">Item</th>
+         <th className="p-2 border">Quantity Sold</th>
+        </tr>
+      </thead>
+     <tbody>
+       {analytics.topItems.map((item, idx) => (
+       <tr key={idx} className="odd:bg-white even:bg-green-50 text-gray-800">
         <td className="p-2 border">{item.menuItem?.name || 'Unknown'}</td>
         <td className="p-2 border">{item.quantitySold}</td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-
-    </div>
+       </tr>
+     ))}
+     </tbody>
+   </table>
+  </div>
   );
 }

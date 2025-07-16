@@ -19,6 +19,8 @@ const Navbar = () => {
     { to: '/additem', label: 'Add Item', private: true, adminOnly: true },
     { to: '/admin/orders', label: 'Admin Orders', private: true, adminOnly: true },
     { to: '/admin/analytics', label: 'Analytics', private: true, adminOnly: true }, // ✅ Admin-only Analytics
+    { to: '/admin/update-images', label: 'Update Images', private: true, adminOnly: true },
+
   ];
 
   const renderLinks = () =>

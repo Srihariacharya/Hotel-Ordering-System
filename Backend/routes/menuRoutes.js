@@ -21,13 +21,40 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-  router.post('/', protect('admin', 'waiter'),async (req, res, next) => {
-    try {
-      const item = await MenuItem.create(req.body);
-      res.status(201).json(item);
-    } catch (err) { next(err); }
+ router.post('/', protect('admin'), async (req, res) => {
+  const { name, category, price, session, image } = req.body;
+
+  if (!name || !category || !price) {
+    return res.status(400).json({ message: 'Missing fields' });
   }
-);
+
+  const item = await MenuItem.create({
+    name,
+    category,
+    price,
+    session,
+    image, // ✅ saved to DB
+  });
+
+  res.status(201).json(item);
+});
+
+// PATCH /menu/:id – Update image URL
+router.patch('/:id', protect('admin'), async (req, res) => {
+  try {
+    const { image } = req.body;
+    const menuItem = await MenuItem.findByIdAndUpdate(
+      req.params.id,
+      { image },
+      { new: true }
+    );
+    res.json(menuItem);
+  } catch (err) {
+    console.error('❌ Update menu item failed:', err.message);
+    res.status(500).json({ error: 'Failed to update menu item' });
+  }
+});
+
 
 module.exports = router;
 

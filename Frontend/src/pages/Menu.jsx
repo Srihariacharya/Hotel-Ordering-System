@@ -40,7 +40,12 @@ const Menu = () => {
     else delete updated[id];
 
     setQuantities(updated);
-    setTotal(Object.values(updated).reduce((sum, item) => sum + item.price * item.quantity, 0));
+    setTotal(
+      Object.values(updated).reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      )
+    );
   };
 
   // 🧾 Place Order
@@ -101,7 +106,7 @@ const Menu = () => {
         ))}
       </div>
 
-      {/* Menu Items */}
+      {/* Menu Items Grid */}
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(220px,1fr))] text-gray-900 dark:text-white">
         {displayed.map((item) => (
           <MenuItemCard
@@ -118,7 +123,29 @@ const Menu = () => {
           </p>
         )}
       </div>
-      
+
+      {/* Table number input and total */}
+      {displayed.length > 0 && (
+        <div className="mt-8 max-w-md mx-auto bg-white dark:bg-gray-800 p-4 shadow-md rounded">
+          <input
+            type="number"
+            placeholder="Enter Table Number"
+            className="input input-bordered w-full mb-4 dark:text-black"
+            value={tableNumber}
+            onChange={(e) => setTableNumber(e.target.value)}
+          />
+          <p className="mb-2 font-medium text-lg">
+            Total: ₹{total.toFixed(2)}
+          </p>
+          <button
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded"
+            onClick={handlePlaceOrder}
+            disabled={total <= 0}
+          >
+            Place Order
+          </button>
+        </div>
+      )}
     </div>
   );
 };

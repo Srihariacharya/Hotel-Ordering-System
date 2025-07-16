@@ -15,6 +15,8 @@ import AddItem from './pages/AddItem';
 import AdminOrders from './pages/AdminOrders';
 import OrderSuccess from './pages/OrderSuccess'; 
 import AdminAnalytics from './pages/AdminAnalytics';
+import UpdateMenuImages from './pages/UpdateMenuImages';
+
 
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -76,6 +78,15 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+
+              <Route
+              path="/admin/update-images"
+              element={
+              <ProtectedRoute adminOnly>
+              <UpdateMenuImages />
+               </ProtectedRoute>
+           }
+          />
             </Route>
 
             {/* ✅ Routes outside layout */}
