@@ -47,22 +47,25 @@ export default function AddItem() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow">
+        {/* Item Name */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Item Name
+            Item Name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             className="w-full border rounded px-3 py-2"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            placeholder="E.g. Masala Dosa"
             required
           />
         </div>
 
+        {/* Price */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Price (₹)
+            Price (₹) <span className="text-red-500">*</span>
           </label>
           <input
             type="number"
@@ -70,13 +73,15 @@ export default function AddItem() {
             className="w-full border rounded px-3 py-2"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
+            placeholder="E.g. 75"
             required
           />
         </div>
 
+        {/* Category */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Category
+            Category <span className="text-red-500">*</span>
           </label>
           <select
             className="w-full border rounded px-3 py-2"
@@ -85,31 +90,53 @@ export default function AddItem() {
             required
           >
             <option value="">-- Select Category --</option>
-            <option value="South Indian">South Indian</option>
-            <option value="North Indian">North Indian</option>
+            <option value="Breakfast">Breakfast</option>
+            <option value="Dosa">Dosa</option>
+            <option value="Soups">Soups</option>
+            <option value="Chats">Chats</option>
+            <option value="Indian Breads">Indian Breads</option>
+            <option value="Paneer Dishes">Paneer Dishes</option>
+            <option value="Vegies Dishes">Vegies Dishes</option>
             <option value="Snacks">Snacks</option>
             <option value="Beverages">Beverages</option>
             <option value="Dessert">Dessert</option>
+            <option value="Thali">Thali</option>
           </select>
         </div>
 
+        {/* Image URL */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Image URL (optional)
+            Image URL
           </label>
           <input
             type="text"
-            placeholder="Image URL"
-             className="input input-bordered w-full mb-4"
-             value={image}
+            placeholder="https://example.com/image.jpg"
+            className="w-full border rounded px-3 py-2"
+            value={image}
             onChange={(e) => setImage(e.target.value)}
-           required
           />
         </div>
 
+        {/* Image Preview */}
+        {image && (
+          <div className="mt-4">
+            <p className="text-sm text-gray-600 mb-1">🔍 Preview:</p>
+            <img
+              src={image}
+              alt="Preview"
+              className="w-full h-48 object-cover border rounded shadow"
+              onError={(e) => {
+                e.target.src = 'https://via.placeholder.com/300x200?text=Invalid+URL';
+              }}
+            />
+          </div>
+        )}
+
+        {/* Submit Button */}
         <button
           type="submit"
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mt-4 w-full"
         >
           Add Item
         </button>
@@ -117,3 +144,4 @@ export default function AddItem() {
     </div>
   );
 }
+

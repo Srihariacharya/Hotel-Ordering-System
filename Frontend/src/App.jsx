@@ -16,7 +16,8 @@ import AdminOrders from './pages/AdminOrders';
 import OrderSuccess from './pages/OrderSuccess'; 
 import AdminAnalytics from './pages/AdminAnalytics';
 import UpdateMenuImages from './pages/UpdateMenuImages';
-
+import AdminMenuDashboard from './pages/AdminMenuDashboard';
+import EditItem from './pages/EditItem';
 
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -94,6 +95,9 @@ export default function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/invoice/:id" element={<Invoice />} />
             <Route path="/order/success" element={<OrderSuccess />} />
+            <Route path="/admin/menu" element={<AdminMenuDashboard />} />
+            <Route path="/admin/add-item" element={<AddItem />} />
+            <Route path="/admin/edit-item/:id" element={<EditItem />} /> 
 
             {/* catch-all fallback route */}
             <Route path="*" element={<Navigate to="/" replace />} />
