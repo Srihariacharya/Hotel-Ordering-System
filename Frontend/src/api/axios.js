@@ -2,9 +2,10 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  withCredentials: true,
+  baseURL: 'https://hotel-ordering-system-production.up.railway.app',
+  withCredentials: true, // this sends cookies/headers
 });
+
 // Request interceptor: attach access token
 api.interceptors.request.use(
   config => {

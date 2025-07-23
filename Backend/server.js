@@ -39,21 +39,21 @@ app.use(express.json());
 
 // 🌐 CORS Configuration
 const allowedOrigins = [
-  'http://localhost:5173', // Dev
-  'https://magical-alpaca-fa7f48.netlify.app' // Netlify frontend
+  'http://localhost:5173',
+  'https://magical-alpaca-fa7f48.netlify.app'
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (e.g., Postman, curl)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
     } else {
-      return callback(new Error('CORS Not Allowed'));
+      callback(new Error('CORS not allowed for this origin'));
     }
   },
-  credentials: true
+  credentials: true, // Important for cookies or auth headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // 🚫 Rate Limiting (15 minutes, 100 requests)
