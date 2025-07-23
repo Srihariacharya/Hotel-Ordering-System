@@ -46,7 +46,7 @@ export default function AdminMenuDashboard() {
               alt={item.name}
               className="w-full h-48 object-cover mb-3 rounded"
             />
-            <h3 className="text-xl font-semibold">{item.name}</h3>
+            <h3 className="text-gray-600 font-semibold">{item.name}</h3>
             <p className="text-gray-600 mb-2">{item.category}</p>
             <p className="text-green-700 font-bold">₹{item.price}</p>
             <div className="flex gap-2 mt-4">
