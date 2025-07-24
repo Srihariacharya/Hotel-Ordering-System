@@ -70,9 +70,6 @@ npm run dev
 🔗 Backend: https://your-railway-url.up.railway.app
 
 📂 Project Structure
-bash
-Copy
-Edit
 hotel-ordering-system/
 ├── backend/
 │   ├── controllers/
