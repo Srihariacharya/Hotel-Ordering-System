@@ -14,6 +14,7 @@ export default function Invoice() {
   const { getToken } = useAuth();
   const [order, setOrder] = useState(null);
 
+  // 📥 Fetch invoice details
   useEffect(() => {
     async function fetchInvoice() {
       try {
@@ -29,14 +30,15 @@ export default function Invoice() {
     fetchInvoice();
   }, [id, getToken]);
 
+  // 📄 Auto-download PDF when order is ready
   useEffect(() => {
-    if (order) downloadPDF(); // ✅ Auto-download on load
+    if (order) downloadPDF();
   }, [order]);
 
+  // 📄 Generate and download PDF invoice
   function downloadPDF() {
     const doc = new jsPDF();
 
-    // Hotel Header
     doc.addImage(logo, 'PNG', 14, 10, 30, 30);
     doc.setFontSize(16);
     doc.text('Shri Shankar Bhavana', 50, 20);
@@ -51,7 +53,7 @@ export default function Invoice() {
     doc.text(`Waiter: ${order.orderedBy.name}`, 14, 64);
     doc.text(`Table No: ${order.tableNumber}`, 120, 64);
 
-    // Order Items
+    // 📦 Order table
     const rows = order.items.map(i => [
       i.menuItem?.name || 'Item',
       i.quantity,
@@ -66,26 +68,31 @@ export default function Invoice() {
     });
 
     const subtotal = order.totalAmount || 0;
-    const gst = +(subtotal * 0.05).toFixed(2);  // 5% GST
+    const gst = +(subtotal * 0.05).toFixed(2);
     const grandTotal = +(subtotal + gst).toFixed(2);
     const finalY = doc.lastAutoTable.finalY || 90;
 
-    // Totals
+    // 💵 Totals
     doc.setFontSize(12);
     doc.text(`Subtotal: INR ${subtotal.toFixed(2)}`, 140, finalY + 10);
     doc.text(`GST (5%): INR ${gst.toFixed(2)}`, 140, finalY + 18);
     doc.setFontSize(13);
     doc.text(`Total: INR ${grandTotal.toFixed(2)}`, 140, finalY + 26);
 
-    // UPI QR Code
+    // 📱 UPI QR Code
     doc.setFontSize(10);
     doc.text('Scan & Pay via UPI:', 14, finalY + 18);
     doc.addImage(upiQR, 'PNG', 14, finalY + 22, 40, 40);
 
+    // 💾 Save
     doc.save(`Invoice_${order._id}.pdf`);
   }
 
   if (!order) return <p className="p-8">Loading invoice...</p>;
+
+  const subtotal = order.totalAmount || 0;
+  const gst = +(subtotal * 0.05).toFixed(2);
+  const total = +(subtotal + gst).toFixed(2);
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-8 bg-white text-black rounded shadow print:bg-white print:text-black">
@@ -112,21 +119,21 @@ export default function Invoice() {
           </tr>
         </thead>
         <tbody>
-          {order.items.map((i, idx) => (
+          {order.items.map((item, idx) => (
             <tr key={idx}>
-              <td className="border p-2">{i.menuItem?.name}</td>
-              <td className="border p-2">{i.quantity}</td>
-              <td className="border p-2">₹{i.price}</td>
-              <td className="border p-2">₹{(i.quantity * i.price).toFixed(2)}</td>
+              <td className="border p-2">{item.menuItem?.name || 'Item'}</td>
+              <td className="border p-2">{item.quantity}</td>
+              <td className="border p-2">₹{item.price}</td>
+              <td className="border p-2">₹{(item.quantity * item.price).toFixed(2)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
       <div className="text-right mt-4 text-sm">
-        <p><strong>Subtotal:</strong> ₹{order.totalAmount.toFixed(2)}</p>
-        <p><strong>GST (5%):</strong> ₹{(order.totalAmount * 0.05).toFixed(2)}</p>
-        <p className="text-lg"><strong>Total:</strong> ₹{(order.totalAmount * 1.05).toFixed(2)}</p>
+        <p><strong>Subtotal:</strong> ₹{subtotal.toFixed(2)}</p>
+        <p><strong>GST (5%):</strong> ₹{gst.toFixed(2)}</p>
+        <p className="text-lg"><strong>Total:</strong> ₹{total.toFixed(2)}</p>
       </div>
 
       <div className="mt-6 flex justify-center gap-4">
