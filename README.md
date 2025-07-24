@@ -46,63 +46,42 @@ A full-featured Hotel Ordering System for restaurants/waiters and admins, built 
 | Database    | MongoDB (Mongoose)                   |
 | Auth        | JWT-based Authentication             |
 | Deployment  | Netlify (Frontend), Render/Railway (Backend) |
-| Invoice     | html2pdf.js, QRCode.js               |
-
+| Invoice     | html2pdf.js, QRCode.js               |<br><br>
 
 🛠️ Setup Instructions
 
- 1. Clone the Repositories
+ 1. Clone the Repositories<br>
+git clone https://github.com/your-username/hotel-ordering-system-backend.git<br>
+git clone https://github.com/your-username/hotel-ordering-system-frontend.git<br><br>
 
-bash
-git clone https://github.com/your-username/hotel-ordering-system-backend.git
-git clone https://github.com/your-username/hotel-ordering-system-frontend.git
+cd hotel-ordering-system-backend<br>
+npm install<br>
+npm run dev<br><br>
 
-cd hotel-ordering-system-backend
-npm install
-npm run dev
+cd hotel-ordering-system-frontend<br>
+npm install<br>
+npm run dev<br><br>
 
-cd hotel-ordering-system-frontend
-npm install
-npm run dev
+🌐 Live Demo<br>
+🔗 Frontend: https://your-netlify-url.netlify.app<br>
+🔗 Backend: https://your-railway-url.up.railway.app<br><br>
 
-🌐 Live Demo
-🔗 Frontend: https://your-netlify-url.netlify.app
-🔗 Backend: https://your-railway-url.up.railway.app
+📚 Documentation<br>
+API Docs coming soon (Postman collection will be added)<br>
+Admin Login: /admin/login<br>
+Place Order: /order/place<br>
+Generate Invoice: /invoice/:orderId<br><br>
 
-📂 Project Structure
-hotel-ordering-system/
-├── backend/
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── middleware/
-│   ├── server.js
-│   └── .env
-├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   ├── components/
-│   │   ├── context/
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   └── vite.config.js
+👥 Contributing<br>
+Fork the repo<br>
+Create your feature branch (git checkout -b feature/YourFeature)<br>
+Commit your changes (git commit -m 'Add awesome feature')<br>
+Push to the branch (git push origin feature/YourFeature)<br>
+Open a Pull Request<br><br>
 
-📚 Documentation
-API Docs coming soon (Postman collection will be added)
-Admin Login: /admin/login
-Place Order: /order/place
-Generate Invoice: /invoice/:orderId
+👨‍💻 Author<br>
+Srihari Acharya<br>
+Feel free to connect or reach out if you need help or want to contribute!<br><br>
 
-👥 Contributing
-Fork the repo
-Create your feature branch (git checkout -b feature/YourFeature)
-Commit your changes (git commit -m 'Add awesome feature')
-Push to the branch (git push origin feature/YourFeature)
-Open a Pull Request
-
-👨‍💻 Author
-Srihari Acharya
-Feel free to connect or reach out if you need help or want to contribute!
-
-📃 License
-This project is open-source and available under the MIT License.
+📃 License<br>
+This project is open-source and available under the MIT License.<<br>
