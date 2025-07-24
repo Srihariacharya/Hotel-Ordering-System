@@ -84,4 +84,4 @@ Srihari Acharya<br>
 Feel free to connect or reach out if you need help or want to contribute!<br><br>
 
 📃 License<br>
-This project is open-source and available under the MIT License.<<br>
+This project is open-source and available under the MIT License.<br>
