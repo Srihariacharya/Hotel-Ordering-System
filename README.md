@@ -45,8 +45,9 @@ A full-featured Hotel Ordering System for restaurants/waiters and admins, built 
 | Backend     | Node.js, Express.js                  |
 | Database    | MongoDB (Mongoose)                   |
 | Auth        | JWT-based Authentication             |
-| Deployment  | Netlify (Frontend), Render/Railway (Backend) |
-| Invoice     | html2pdf.js, QRCode.js               |<br><br>
+| Deployment  | Netlify (Frontend),Railway (Backend) |
+| Invoice     | html2pdf.js, QRCode.js               |
+<br><br>
 
 🛠️ Setup Instructions
 
@@ -84,4 +85,4 @@ Srihari Acharya<br>
 Feel free to connect or reach out if you need help or want to contribute!<br><br>
 
 📃 License<br>
-This project is open-source and available under the MIT License.<br>
+This project is open-source and available under the MIT License.
