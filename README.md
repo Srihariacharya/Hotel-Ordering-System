@@ -47,3 +47,12 @@ A full-featured Hotel Ordering System for restaurants/waiters and admins, built 
 | Auth        | JWT-based Authentication             |
 | Deployment  | Netlify (Frontend), Render/Railway (Backend) |
 | Invoice     | html2pdf.js, QRCode.js               |
+
+
+🛠️ Setup Instructions
+
+ 1. Clone the Repositories
+
+bash
+git clone https://github.com/your-username/hotel-ordering-system-backend.git
+git clone https://github.com/your-username/hotel-ordering-system-frontend.git
