@@ -6,15 +6,16 @@ import { useAuth } from '../context/AuthContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import logo from '../assets/logo.png';      // ✅ Add your logo image
-import upiQR from '../assets/upi-qr.png';   // ✅ Add your UPI QR image
+import logo from '../assets/logo.png';      // ✅ Logo file
+import upiQR from '../assets/upi-qr.png';   // ✅ UPI QR file
 
 export default function Invoice() {
   const { id } = useParams();
   const { getToken } = useAuth();
   const [order, setOrder] = useState(null);
+  const [error, setError] = useState('');
 
-  // 📥 Fetch invoice details
+  // ✅ Fetch invoice
   useEffect(() => {
     async function fetchInvoice() {
       try {
@@ -22,24 +23,37 @@ export default function Invoice() {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
         setOrder(res.data);
-      } catch (err) {
-        alert(err.response?.data?.error || 'Could not fetch invoice');
+      } catch (err1) {
+        // Try fallback if custom /invoice route not found
+        try {
+          const res = await api.get(`/order/${id}`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+          });
+          setOrder(res.data);
+        } catch (err2) {
+          setError('Could not fetch invoice.');
+        }
       }
     }
 
     fetchInvoice();
   }, [id, getToken]);
 
-  // 📄 Auto-download PDF when order is ready
+  // ✅ Download PDF after load (optional: auto-trigger)
   useEffect(() => {
-    if (order) downloadPDF();
+    if (order) {
+      // Uncomment if you want to auto-download PDF:
+      // downloadPDF();
+    }
   }, [order]);
 
-  // 📄 Generate and download PDF invoice
   function downloadPDF() {
     const doc = new jsPDF();
 
-    doc.addImage(logo, 'PNG', 14, 10, 30, 30);
+    // ✅ Header
+    try {
+      doc.addImage(logo, 'PNG', 14, 10, 30, 30);
+    } catch {}
     doc.setFontSize(16);
     doc.text('Shri Shankar Bhavana', 50, 20);
     doc.setFontSize(11);
@@ -50,10 +64,9 @@ export default function Invoice() {
     doc.text(`Invoice Date: ${now.toLocaleDateString()}`, 14, 48);
     doc.text(`Time: ${now.toLocaleTimeString()}`, 120, 48);
     doc.text(`Invoice No: INV-${order._id.slice(-6).toUpperCase()}`, 14, 56);
-    doc.text(`Waiter: ${order.orderedBy.name}`, 14, 64);
+    doc.text(`Waiter: ${order.orderedBy?.name || 'N/A'}`, 14, 64);
     doc.text(`Table No: ${order.tableNumber}`, 120, 64);
 
-    // 📦 Order table
     const rows = order.items.map(i => [
       i.menuItem?.name || 'Item',
       i.quantity,
@@ -72,23 +85,23 @@ export default function Invoice() {
     const grandTotal = +(subtotal + gst).toFixed(2);
     const finalY = doc.lastAutoTable.finalY || 90;
 
-    // 💵 Totals
     doc.setFontSize(12);
     doc.text(`Subtotal: INR ${subtotal.toFixed(2)}`, 140, finalY + 10);
     doc.text(`GST (5%): INR ${gst.toFixed(2)}`, 140, finalY + 18);
     doc.setFontSize(13);
     doc.text(`Total: INR ${grandTotal.toFixed(2)}`, 140, finalY + 26);
 
-    // 📱 UPI QR Code
     doc.setFontSize(10);
     doc.text('Scan & Pay via UPI:', 14, finalY + 18);
-    doc.addImage(upiQR, 'PNG', 14, finalY + 22, 40, 40);
+    try {
+      doc.addImage(upiQR, 'PNG', 14, finalY + 22, 40, 40);
+    } catch {}
 
-    // 💾 Save
     doc.save(`Invoice_${order._id}.pdf`);
   }
 
-  if (!order) return <p className="p-8">Loading invoice...</p>;
+  if (error) return <div className="text-red-600 p-6">{error}</div>;
+  if (!order) return <div className="p-6 text-gray-500">Loading invoice...</div>;
 
   const subtotal = order.totalAmount || 0;
   const gst = +(subtotal * 0.05).toFixed(2);
@@ -105,7 +118,7 @@ export default function Invoice() {
       <div className="text-sm mb-4">
         <p><strong>Invoice ID:</strong> INV-{order._id.slice(-6).toUpperCase()}</p>
         <p><strong>Date:</strong> {new Date().toLocaleDateString()} | <strong>Time:</strong> {new Date().toLocaleTimeString()}</p>
-        <p><strong>Waiter:</strong> {order.orderedBy.name}</p>
+        <p><strong>Waiter:</strong> {order.orderedBy?.name || 'N/A'}</p>
         <p><strong>Table:</strong> {order.tableNumber}</p>
       </div>
 
