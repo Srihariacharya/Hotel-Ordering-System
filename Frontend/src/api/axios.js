@@ -29,7 +29,13 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post('/auth/refresh', { refreshToken });
+
+        // ✅ FIX: Use full URL for refresh token endpoint
+        const response = await axios.post(
+          'https://hotel-ordering-system-production.up.railway.app/api/auth/refresh',
+          { refreshToken },
+          { withCredentials: true }
+        );
 
         const { accessToken, refreshToken: newRefresh, user } = response.data;
 

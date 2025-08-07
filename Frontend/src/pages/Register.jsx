@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axios';
-
+import api from '../api/axios'; // Using this instance with baseURL & headers
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -11,20 +10,26 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      const res = await axios.post('/auth/register', {
-        name,
+      const res = await api.post('/auth/register', {
+        name: name.trim(),
         email: email.trim().toLowerCase(),
         password: password.trim(),
       });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      navigate('/');
+
+      if (res.data?.token && res.data?.user) {
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+        navigate('/');
+      } else {
+        alert('Registration failed. Missing user or token.');
+      }
     } catch (err) {
+      console.error('Registration error:', err);
       alert(err.response?.data?.message || 'Registration failed');
     }
   };
-  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
