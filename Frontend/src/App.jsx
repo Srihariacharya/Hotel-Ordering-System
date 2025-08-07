@@ -91,7 +91,7 @@ export default function App() {
 
             {/* 🚫 Routes that don’t use the layout */}
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/auth/register" element={<Register />} />
             <Route path="/invoice/:id" element={<Invoice />} />
             <Route path="/order/success" element={<OrderSuccess />} />
 

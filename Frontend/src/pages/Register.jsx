@@ -19,20 +19,23 @@ const Register = () => {
     e.preventDefault();
 
     try {
-      const res = await axios.post('http://localhost:5000/auth/register', formData);
+      // ✅ Fixed endpoint – removed '/auth'
+      const res = await axios.post(' http://localhost:5000/auth/register', formData);
 
-      // ✅ Save tokens & user data to localStorage
-      localStorage.setItem('accessToken', res.data.accessToken);
-      localStorage.setItem('refreshToken', res.data.refreshToken);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      // ✅ Optional: Save tokens if your backend sends them
+      if (res.data.accessToken) {
+        localStorage.setItem('accessToken', res.data.accessToken);
+        localStorage.setItem('refreshToken', res.data.refreshToken);
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+      }
 
       alert('Registration successful ✅');
-      navigate('/'); // or navigate('/login') if you want to redirect to login
+      navigate('/login'); // or '/' if auto-login
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.message) {
-        alert(err.response.data.message); // Only show real error message
+      if (err.response?.data?.message) {
+        alert(`❌ ${err.response.data.message}`);
       } else {
-        alert('Something went wrong during registration');
+        alert('❌ Registration failed. Please try again.');
       }
     }
   };
