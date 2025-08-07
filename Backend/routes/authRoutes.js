@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { generateTokens } = require('../utils/jwt');
 
+// ✅ Register Route
 router.post('/register', async (req, res) => {
   let { name, email, password } = req.body;
 
@@ -30,7 +32,7 @@ router.post('/register', async (req, res) => {
         id: user._id,
         name: user.name,
         role: user.role,
-        isAdmin: user.role === 'admin',
+        isAdmin: user.isAdmin,
       },
     });
   } catch (err) {
@@ -39,6 +41,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// ✅ Login Route
 router.post('/login', async (req, res) => {
   let { email, password } = req.body;
 
@@ -64,7 +67,7 @@ router.post('/login', async (req, res) => {
         id: user._id,
         name: user.name,
         role: user.role,
-        isAdmin: user.role === 'admin',
+        isAdmin: user.isAdmin,
       },
     });
   } catch (err) {
@@ -73,6 +76,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// ✅ Refresh Token Route
 router.post('/refresh', async (req, res) => {
   const { refreshToken } = req.body;
 
@@ -97,10 +101,11 @@ router.post('/refresh', async (req, res) => {
         id: user._id,
         name: user.name,
         role: user.role,
-        isAdmin: user.role === 'admin'
-      }
+        isAdmin: user.isAdmin,
+      },
     });
   } catch (err) {
+    console.error('Refresh error:', err);
     return res.status(403).json({ error: 'Invalid or expired refresh token' });
   }
 });
