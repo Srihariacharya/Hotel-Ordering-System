@@ -30,7 +30,6 @@ api.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refreshToken');
 
-        // ✅ FIX: Use full URL for refresh token endpoint
         const response = await axios.post(
           'https://hotel-ordering-system-production.up.railway.app/api/auth/refresh',
           { refreshToken },
@@ -48,7 +47,7 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        console.error('🔁 Token refresh failed:', refreshError);
+        console.error('Token refresh failed:', refreshError);
         localStorage.clear();
         window.location.href = '/login';
         return Promise.reject(refreshError);

@@ -1,92 +1,88 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axios'; // Using this instance with baseURL & headers
 
 const Register = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPass] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleRegister = async (e) => {
     e.preventDefault();
 
     try {
-      const res = await api.post('/auth/register', {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        password: password.trim(),
-      });
+      const res = await axios.post('http://localhost:5000/auth/register', formData);
 
-      if (res.data?.token && res.data?.user) {
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
-        navigate('/');
-      } else {
-        alert('Registration failed. Missing user or token.');
-      }
+      // ✅ Save tokens & user data to localStorage
+      localStorage.setItem('accessToken', res.data.accessToken);
+      localStorage.setItem('refreshToken', res.data.refreshToken);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+
+      alert('Registration successful ✅');
+      navigate('/'); // or navigate('/login') if you want to redirect to login
     } catch (err) {
-      console.error('Registration error:', err);
-      alert(err.response?.data?.message || 'Registration failed');
+      if (err.response && err.response.data && err.response.data.message) {
+        alert(err.response.data.message); // Only show real error message
+      } else {
+        alert('Something went wrong during registration');
+      }
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm bg-white p-8 rounded-lg shadow-md"
-      >
-        <h2 className="text-3xl font-bold mb-6 text-gray-800 text-center">
-          Register
-        </h2>
-
-        <label className="block mb-4">
-          <span className="block text-sm font-medium text-gray-700">Name</span>
+    <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow-md rounded">
+      <h2 className="text-2xl font-semibold mb-4">Register</h2>
+      <form onSubmit={handleRegister} className="space-y-4">
+        <div>
+          <label className="block mb-1">Name</label>
           <input
             type="text"
+            name="name"
             required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full px-3 py-2 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400"
+            value={formData.name}
+            onChange={handleChange}
+            className="w-full border px-3 py-2 rounded"
           />
-        </label>
+        </div>
 
-        <label className="block mb-4">
-          <span className="block text-sm font-medium text-gray-700">Email</span>
+        <div>
+          <label className="block mb-1">Email</label>
           <input
             type="email"
+            name="email"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full px-3 py-2 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400"
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full border px-3 py-2 rounded"
           />
-        </label>
+        </div>
 
-        <label className="block mb-6">
-          <span className="block text-sm font-medium text-gray-700">Password</span>
+        <div>
+          <label className="block mb-1">Password</label>
           <input
             type="password"
+            name="password"
             required
-            value={password}
-            onChange={(e) => setPass(e.target.value)}
-            className="mt-1 w-full px-3 py-2 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400"
+            value={formData.password}
+            onChange={handleChange}
+            className="w-full border px-3 py-2 rounded"
           />
-        </label>
+        </div>
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-semibold"
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
         >
-          Sign Up
+          Register
         </button>
-
-        <p className="text-center text-sm mt-4 text-gray-600">
-          Already have an account?{' '}
-          <a href="/login" className="text-blue-600 hover:underline">
-            Log in
-          </a>
-        </p>
       </form>
     </div>
   );
