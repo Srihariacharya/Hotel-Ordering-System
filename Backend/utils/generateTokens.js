@@ -4,23 +4,21 @@ const generateAccessToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || '7d' }
   );
 };
 
 const generateRefreshToken = (user) => {
   return jwt.sign(
     { id: user._id },
-    process.env.REFRESH_TOKEN_SECRET,
-    { expiresIn: '7d' }
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRY || '7d' }
   );
 };
 
-const generateTokens = (user) => {
-  return {
-    accessToken: generateAccessToken(user),
-    refreshToken: generateRefreshToken(user),
-  };
-};
+const generateTokens = (user) => ({
+  accessToken: generateAccessToken(user),
+  refreshToken: generateRefreshToken(user),
+});
 
 module.exports = generateTokens;

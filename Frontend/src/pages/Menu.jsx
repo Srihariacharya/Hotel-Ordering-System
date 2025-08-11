@@ -17,6 +17,7 @@ const Menu = () => {
   useEffect(() => {
     const fetchMenu = async () => {
       try {
+        // ✅ Fixed: matches server.js `/menu` route (no /api prefix)
         const res = await api.get('/menu');
         setMenuItems(res.data);
 
