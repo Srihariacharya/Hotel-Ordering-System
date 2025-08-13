@@ -25,6 +25,7 @@ const orderSchema = Joi.object({
 /* --------------------------------------------------------------
    POST /order  – waiter | admin creates a new order
 ----------------------------------------------------------------*/
+// Fix the totalPrice vs totalAmount inconsistency
 exports.placeOrder = async (req, res) => {
   const { error, value } = orderSchema.validate(req.body);
   if (error) return res.status(400).json({ error: error.details[0].message });
@@ -33,25 +34,23 @@ exports.placeOrder = async (req, res) => {
   const ids = items.map((i) => i.menuItem);
 
   try {
-    // verify every menuItem exists
     const docs = await MenuItem.find({ _id: { $in: ids } });
     if (docs.length !== ids.length) {
       return res.status(400).json({ error: 'One or more menu items not found' });
     }
 
-    // compute total on server (trust but verify)
     const priceMap = Object.fromEntries(docs.map((d) => [d._id.toString(), d.price]));
-    let totalPrice = 0;
+    let totalAmount = 0; // ✅ Fix: Use totalAmount consistently
     const itemsWithServerPrice = items.map((i) => {
       const unit = priceMap[i.menuItem];
-      totalPrice += unit * i.quantity;
-      return { ...i, price: unit };        // overwrite client price with DB price
+      totalAmount += unit * i.quantity;
+      return { ...i, price: unit };
     });
 
     const order = await Order.create({
       tableNumber,
       items: itemsWithServerPrice,
-      totalPrice,
+      totalAmount, // ✅ Fix: Use totalAmount
       orderedBy: req.user.id,
     });
 

@@ -1,4 +1,3 @@
-// routes/authRoutes.js
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -7,7 +6,7 @@ const { generateTokens } = require('../utils/jwt');
 
 const router = express.Router();
 
-// Register
+// ✅ FIXED Register Route
 router.post('/register', async (req, res) => {
   try {
     let { name = '', email = '', password = '' } = req.body;
@@ -15,50 +14,83 @@ router.post('/register', async (req, res) => {
     email = email.trim().toLowerCase();
     password = password.trim();
 
+    console.log('📝 Registration attempt:', { name, email });
+
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
     const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ message: 'Email already registered' });
+    if (existing) {
+      console.warn('⚠️ Email already exists:', email);
+      return res.status(400).json({ message: 'Email already registered' });
+    }
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashed, role: 'user' });
+    const user = await User.create({ 
+      name, 
+      email, 
+      password: hashed, 
+      role: 'user' 
+    });
+
+    console.log('✅ User created:', user._id);
 
     const { accessToken, refreshToken } = generateTokens(user);
 
     res.status(201).json({
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role 
+      },
       accessToken,
       refreshToken
     });
   } catch (err) {
-    console.error('Register error:', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Register error:', err);
+    res.status(500).json({ message: 'Server error during registration' });
   }
 });
 
-// Login
+// ✅ FIXED Login Route
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() });
+    console.log('🔐 Login attempt for:', email);
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
+      console.warn('⚠️ User not found:', email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // 2. Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
+    console.log('👤 User found:', { id: user._id, name: user.name, role: user.role });
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password.trim(), user.password);
     if (!isMatch) {
+      console.warn('⚠️ Password mismatch for:', email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // 3. Generate tokens
+    // ✅ CRITICAL: Generate tokens using fixed utility
     const { accessToken, refreshToken } = generateTokens(user);
 
-    // 4. Send tokens and user data (excluding password)
+    console.log('✅ Login successful for:', email);
+    console.log('🎫 Tokens generated:', {
+      accessToken: accessToken.substring(0, 20) + '...',
+      refreshToken: refreshToken.substring(0, 20) + '...'
+    });
+
+    // Return tokens and user data
     res.json({
       accessToken,
       refreshToken,
@@ -70,19 +102,23 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('❌ Login error:', err.message);
-    res.status(500).json({ error: 'Server error' });
+    console.error('❌ Login error:', err);
+    res.status(500).json({ error: 'Server error during login' });
   }
 });
 
-// Refresh
+// ✅ FIXED Refresh Route
 router.post('/refresh', async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
+    if (!refreshToken) {
+      return res.status(400).json({ message: 'Refresh token required' });
+    }
+
+    console.log('🔄 Token refresh attempt');
 
     if (!process.env.REFRESH_TOKEN_SECRET) {
-      console.error('Missing REFRESH_TOKEN_SECRET');
+      console.error('❌ Missing REFRESH_TOKEN_SECRET');
       return res.status(500).json({ message: 'Server misconfiguration' });
     }
 
@@ -90,22 +126,33 @@ router.post('/refresh', async (req, res) => {
     try {
       decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
     } catch (err) {
+      console.warn('⚠️ Invalid refresh token:', err.message);
       return res.status(401).json({ message: 'Invalid or expired refresh token' });
     }
 
     const user = await User.findById(decoded.id);
-    if (!user) return res.status(401).json({ message: 'User not found' });
+    if (!user) {
+      console.warn('⚠️ User not found for refresh token');
+      return res.status(401).json({ message: 'User not found' });
+    }
 
     const { accessToken, refreshToken: newRefresh } = generateTokens(user);
 
+    console.log('✅ Tokens refreshed for:', user.email);
+
     res.json({
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role 
+      },
       accessToken,
       refreshToken: newRefresh
     });
   } catch (err) {
-    console.error('Refresh error:', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Refresh error:', err);
+    res.status(500).json({ message: 'Server error during token refresh' });
   }
 });
 

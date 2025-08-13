@@ -38,7 +38,7 @@ export default function AddItem() {
 
   return (
     <div className="max-w-xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-4 text-green-700">➕ Add New Menu Item</h2>
+      <h2 className="text-2xl font-bold mb-4 text-green-700">Add New Menu Item</h2>
 
       {message && (
         <div className="mb-4 text-sm font-medium text-center text-red-600">

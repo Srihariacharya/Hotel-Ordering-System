@@ -1,102 +1,111 @@
-// src/context/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import jwtDecode from 'jwt-decode';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Initialize user from localStorage
+  useEffect(() => {
     try {
-      const u = localStorage.getItem('user');
-      return u ? JSON.parse(u) : null;
-    } catch {
-      return null;
+      const storedUser = localStorage.getItem('user');
+      const token = localStorage.getItem('accessToken');
+      
+      console.log('🔄 AuthContext initialization:', {
+        hasStoredUser: !!storedUser,
+        hasToken: !!token,
+      });
+
+      if (storedUser && token) {
+        const parsedUser = JSON.parse(storedUser);
+        const enhanced = { ...parsedUser, isAdmin: parsedUser.role === 'admin' };
+        setUser(enhanced);
+        console.log('✅ User session restored:', enhanced);
+      }
+    } catch (error) {
+      console.error('❌ Error restoring user session:', error);
+      localStorage.clear();
     }
-  });
+    setLoading(false);
+  }, []);
 
-  const getToken = () => localStorage.getItem('accessToken');
-  const getRefreshToken = () => localStorage.getItem('refreshToken');
+  const getToken = useCallback(() => {
+    const token = localStorage.getItem('accessToken');
+    console.log('🎫 Getting token:', token ? `${token.substring(0, 20)}...` : 'None');
+    return token;
+  }, []);
 
-  const enhance = (raw) => ({ ...raw, isAdmin: raw?.role === 'admin' });
+  const login = useCallback((userData, accessToken, refreshToken) => {
+    console.log('🔐 AuthContext login called:', {
+      user: userData,
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+    });
 
-  const login = (userData, accessToken, refreshToken) => {
-    const enhanced = enhance(userData);
+    const enhanced = { ...userData, isAdmin: userData.role === 'admin' };
+    
+    // Store in localStorage
     localStorage.setItem('user', JSON.stringify(enhanced));
     localStorage.setItem('accessToken', accessToken);
-    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+    
+    // Update state
     setUser(enhanced);
-    scheduleRefresh(accessToken);
-  };
+    setLoading(false);
+    
+    console.log('✅ Login completed, user set in context');
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
+    console.log('🚪 AuthContext logout called');
+    
     localStorage.removeItem('user');
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    
     setUser(null);
-  };
-
-  const refreshAccessToken = useCallback(async () => {
-    try {
-      const refreshToken = getRefreshToken();
-      if (!refreshToken) { logout(); return; }
-
-      const res = await fetch((import.meta.env.MODE === 'development' ? 'http://localhost:5000' : 'https://hotel-ordering-system-production.up.railway.app') + '/auth/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken })
-      });
-
-      if (!res.ok) throw new Error('Refresh failed');
-      const data = await res.json();
-      const enhanced = enhance(data.user);
-      localStorage.setItem('accessToken', data.accessToken);
-      if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
-      localStorage.setItem('user', JSON.stringify(enhanced));
-      setUser(enhanced);
-      scheduleRefresh(data.accessToken);
-    } catch (err) {
-      console.error('Token refresh failed', err);
-      logout();
-    }
+    setLoading(false);
+    
+    console.log('✅ Logout completed');
   }, []);
 
-  // schedule refresh based on token expiry
-  const scheduleRefresh = (token) => {
-    if (!token) return;
-    try {
-      const decoded = jwtDecode(token);
-      const expMs = decoded.exp * 1000;
-      const timeout = expMs - Date.now() - 30 * 1000;
-      if (timeout <= 0) { refreshAccessToken(); return; }
-      setTimeout(() => refreshAccessToken(), timeout);
-    } catch (err) {
-      console.error('Token decode failed', err);
-      logout();
-    }
+  const isAuthenticated = useCallback(() => {
+    const token = getToken();
+    const currentUser = user;
+    const authenticated = !!(token && currentUser);
+    
+    console.log('🔍 Authentication check:', {
+      hasToken: !!token,
+      hasUser: !!currentUser,
+      authenticated
+    });
+    
+    return authenticated;
+  }, [user, getToken]);
+
+  const value = {
+    user,
+    loading,
+    login,
+    logout,
+    getToken,
+    isAuthenticated,
   };
 
-  useEffect(() => {
-    const token = getToken();
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        if (decoded.exp * 1000 > Date.now()) {
-          scheduleRefresh(token);
-        } else {
-          refreshAccessToken();
-        }
-      } catch (err) {
-        console.error('Token decode on startup failed', err);
-        logout();
-      }
-    }
-  }, [refreshAccessToken]);
-
   return (
-    <AuthContext.Provider value={{ user, login, logout, getToken }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

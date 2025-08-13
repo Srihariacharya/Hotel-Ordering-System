@@ -23,7 +23,8 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    totalAmount: {  // ✅ changed from totalPrice → totalAmount
+    // ✅ Fix: Use consistent field name
+    totalAmount: {
       type: Number,
       required: true,
     },
@@ -41,7 +42,7 @@ const orderSchema = new mongoose.Schema(
     servedAt: Date,
   },
   {
-    timestamps: true, // adds createdAt and updatedAt
+    timestamps: true,
   }
 );
 
