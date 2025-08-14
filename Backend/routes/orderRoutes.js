@@ -156,6 +156,142 @@ router.put('/:id/serve', protect('admin'), async (req, res) => {
   }
 });
 
+router.get('/admin/analytics', protect('admin'), async (req, res) => {
+  try {
+    console.log('📊 Analytics request from:', req.user.name);
+
+    const { start, end } = req.query;
+
+    // Set date range
+    const matchStage = {};
+    if (start && end) {
+      matchStage.createdAt = {
+        $gte: new Date(start),
+        $lte: new Date(end),
+      };
+    } else {
+      // Default to last 30 days
+      const from = new Date();
+      from.setDate(from.getDate() - 30);
+      matchStage.createdAt = { $gte: from };
+    }
+
+    console.log('📅 Date range for analytics:', matchStage);
+
+    // Daily stats aggregation
+    const dailyStats = await Order.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          totalOrders: { $sum: 1 },
+          dailyIncome: { $sum: '$totalAmount' },
+        },
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Monthly income calculation
+    const monthlyIncome = await Order.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$totalAmount' },
+        },
+      },
+    ]);
+
+    // Top selling items
+    const topItems = await Order.aggregate([
+      { $match: matchStage },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.menuItem',
+          quantitySold: { $sum: '$items.quantity' },
+          revenue: { $sum: { $multiply: ['$items.quantity', '$items.price'] } }
+        },
+      },
+      {
+        $lookup: {
+          from: 'menuitems',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'menuItem',
+        },
+      },
+      { $unwind: { path: '$menuItem', preserveNullAndEmptyArrays: true } },
+      { $sort: { quantitySold: -1 } },
+      { $limit: 10 },
+    ]);
+
+    const result = {
+      dailyStats: dailyStats || [],
+      monthlyIncome: monthlyIncome[0]?.total || 0,
+      topItems: topItems || [],
+      summary: {
+        totalOrders: dailyStats.reduce((sum, day) => sum + day.totalOrders, 0),
+        averageOrderValue: monthlyIncome[0]?.total ? 
+          (monthlyIncome[0].total / dailyStats.reduce((sum, day) => sum + day.totalOrders, 0)).toFixed(2) : 0
+      }
+    };
+
+    console.log('✅ Analytics data prepared:', {
+      dailyStats: result.dailyStats.length,
+      monthlyIncome: result.monthlyIncome,
+      topItems: result.topItems.length
+    });
+
+    res.json(result);
+
+  } catch (error) {
+    console.error('❌ Analytics error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch analytics',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// ✅ Additional analytics endpoints
+router.get('/admin/top-items', protect('admin'), async (req, res) => {
+  const days = parseInt(req.query.days) || 15;
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - days);
+
+  try {
+    const topItems = await Order.aggregate([
+      { $match: { createdAt: { $gte: fromDate } } },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.menuItem',
+          totalSold: { $sum: '$items.quantity' },
+          totalRevenue: { $sum: { $multiply: ['$items.quantity', '$items.price'] } },
+        },
+      },
+      {
+        $lookup: {
+          from: 'menuitems',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'menuItem',
+        },
+      },
+      { $unwind: { path: '$menuItem', preserveNullAndEmptyArrays: true } },
+      { $sort: { totalSold: -1 } },
+      { $limit: 10 },
+    ]);
+
+    res.json(topItems);
+  } catch (error) {
+    console.error('❌ Top items error:', error);
+    res.status(500).json({ error: 'Failed to fetch top items' });
+  }
+});
+
 // GET /order/:id/invoice - View invoice (User can see own, Admin can see all)
 router.get('/:id/invoice', protect(), async (req, res) => {
   try {
