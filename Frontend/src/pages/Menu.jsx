@@ -1,30 +1,39 @@
-import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import api from '../api/axios';
-import MenuItemCard from '../components/MenuItemCard';
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import api from "../api/axios";
+import MenuItemCard from "../components/MenuItemCard";
 
 const Menu = () => {
   const [menuItems, setMenuItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [total, setTotal] = useState(0);
-  const [tableNumber, setTableNumber] = useState('');
+  const [tableNumber, setTableNumber] = useState("");
 
   const [searchParams, setSP] = useSearchParams();
-  const activeCat = searchParams.get('c') || '';
+  const activeCat = searchParams.get("c") || "";
 
   // 🥗 Fetch menu items
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        // ✅ Fixed: matches server.js `/menu` route (no /api prefix)
-        const res = await api.get('/menu');
-        setMenuItems(res.data);
+        const res = await api.get("/menu");
 
-        const uniqueCats = [...new Set(res.data.map(i => i.category))];
+        // Ensure every item has an imageUrl (for old DB entries)
+        const updatedItems = res.data.map((item) => ({
+          ...item,
+          imageUrl:
+            item.imageUrl && item.imageUrl.trim() !== ""
+              ? item.imageUrl
+              : "https://via.placeholder.com/200x150?text=No+Image",
+        }));
+
+        setMenuItems(updatedItems);
+
+        const uniqueCats = [...new Set(updatedItems.map((i) => i.category))];
         setCategories(uniqueCats);
       } catch (err) {
-        console.error('❌ Error loading menu:', err);
+        console.error("❌ Error loading menu:", err);
       }
     };
     fetchMenu();
@@ -32,7 +41,7 @@ const Menu = () => {
 
   const displayed = !activeCat
     ? menuItems
-    : menuItems.filter(i => i.category === activeCat);
+    : menuItems.filter((i) => i.category === activeCat);
 
   // 🧮 Handle quantity change
   const handleQuantity = (id, price, qty) => {
@@ -51,9 +60,9 @@ const Menu = () => {
 
   // 🧾 Place Order
   const handlePlaceOrder = async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return alert('Login first');
-    if (!tableNumber) return alert('Enter table number');
+    const token = localStorage.getItem("accessToken");
+    if (!token) return alert("Login first");
+    if (!tableNumber) return alert("Enter table number");
 
     const items = Object.entries(quantities).map(([id, o]) => ({
       menuItem: id,
@@ -63,20 +72,20 @@ const Menu = () => {
 
     try {
       await api.post(
-        '/order',
+        "/order",
         { tableNumber: Number(tableNumber), items },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      alert('✅ Order placed');
+      alert("✅ Order placed");
       setQuantities({});
       setTotal(0);
-      setTableNumber('');
+      setTableNumber("");
     } catch (e) {
-      console.error('❌ Order failed:', e);
-      alert(e.response?.data?.error || 'Order failed');
+      console.error("❌ Order failed:", e);
+      alert(e.response?.data?.error || "Order failed");
     }
   };
 
@@ -95,12 +104,11 @@ const Menu = () => {
           <button
             key={c}
             onClick={() => toggleCat(c)}
-            className={`px-4 py-1 rounded-full border transition
-              ${
-                c === activeCat
-                  ? 'bg-green-600 text-white border-green-600'
-                  : 'bg-white text-black hover:bg-green-100 border-green-300 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700'
-              }`}
+            className={`px-4 py-1 rounded-full border transition ${
+              c === activeCat
+                ? "bg-green-600 text-white border-green-600"
+                : "bg-white text-black hover:bg-green-100 border-green-300 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+            }`}
           >
             {c}
           </button>
@@ -124,29 +132,6 @@ const Menu = () => {
           </p>
         )}
       </div>
-
-      {/* Table number input and total */}
-      {displayed.length > 0 && (
-        <div className="mt-8 max-w-md mx-auto bg-white dark:bg-gray-800 p-4 shadow-md rounded">
-          <input
-            type="number"
-            placeholder="Enter Table Number"
-            className="input input-bordered w-full mb-4 dark:text-black"
-            value={tableNumber}
-            onChange={(e) => setTableNumber(e.target.value)}
-          />
-          <p className="mb-2 font-medium text-lg">
-            Total: ₹{total.toFixed(2)}
-          </p>
-          <button
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded"
-            onClick={handlePlaceOrder}
-            disabled={total <= 0}
-          >
-            Place Order
-          </button>
-        </div>
-      )}
     </div>
   );
 };

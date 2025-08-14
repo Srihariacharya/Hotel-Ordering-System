@@ -18,11 +18,10 @@ const menuItemSchema = new mongoose.Schema({
   },
   imageUrl: { 
     type: String, 
-    required: false, // ✅ Make it optional to avoid validation errors
     default: 'https://via.placeholder.com/300x200?text=No+Image'
-  },
+  }
 }, {
-  timestamps: true // Add createdAt and updatedAt
+  timestamps: true
 });
 
 module.exports = mongoose.model('MenuItem', menuItemSchema);

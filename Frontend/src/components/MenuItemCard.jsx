@@ -13,10 +13,18 @@ const MenuItemCard = ({ item }) => {
     }
   };
 
+  // ✅ Pick the right image field (old DB uses `image`, new uses `imageUrl`)
+  const imageSrc =
+    item.imageUrl?.trim()
+      ? item.imageUrl
+      : item.image?.trim()
+      ? item.image
+      : '/no-image.png';
+
   return (
     <div className="p-4 bg-white dark:bg-gray-800 rounded shadow-md">
       <img
-        src={item.image || '/no-image.png'}
+        src={imageSrc}
         alt={item.name}
         className="w-full h-36 object-cover mb-3 rounded"
       />

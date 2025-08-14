@@ -28,7 +28,7 @@ const Home = () => {
               {user.role === 'admin' ? (
                 <span className="text-yellow-300 font-semibold">Admin</span>
               ) : (
-                <span className="text-green-200 font-semibold">Customer</span>
+                <span className="text-green-200 font-semibold">Waiter</span>
               )}
               )
             </p>

@@ -132,7 +132,7 @@ export default function AdminAnalytics() {
       {analytics.dailyStats && analytics.dailyStats.length > 0 && (
         <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
           <div className="px-6 py-4 border-b">
-            <h3 className="text-lg font-semibold">📅 Daily Performance</h3>
+            <h3 className="text-gray-800 font-semibold">📅 Daily Performance</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -161,7 +161,7 @@ export default function AdminAnalytics() {
       {analytics.topItems && analytics.topItems.length > 0 && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-6 py-4 border-b">
-            <h3 className="text-lg font-semibold">🍲 Top Selling Items</h3>
+            <h3 className="text-black font-semibold">🍲 Top Selling Items</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
