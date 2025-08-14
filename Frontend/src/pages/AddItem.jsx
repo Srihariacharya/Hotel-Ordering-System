@@ -1,258 +1,235 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
 export default function AddItem() {
-  const { user, getToken } = useAuth();
-  const navigate = useNavigate();
+  const { getToken, user } = useAuth();
 
-  const [formData, setFormData] = useState({
-    name: '',
-    price: '',
-    category: '',
-    image: '',
-    description: ''
-  });
-  const [loading, setLoading] = useState(false);
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [category, setCategory] = useState('');
+  const [image, setImage] = useState('');
   const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-
-  const categories = [
-    'Breakfast',
-    'Dosa',
-    'Soups',
-    'Chats',
-    'Indian Breads',
-    'Paneer Dishes',
-    'Vegies Dishes',
-    'Snacks',
-    'Beverages',
-    'Dessert',
-    'Thali'
-  ];
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Clear messages when user types
-    if (message || error) {
-      setMessage('');
-      setError('');
-    }
-  };
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!user?.role === 'admin') {
-      setError('Admin access required');
-      return;
+
+    // 🔍 Debug user info
+    console.log('🔍 Debug Info:', {
+      user,
+      hasToken: !!getToken(),
+      isAdmin: user?.role === 'admin',
+      userRole: user?.role
+    });
+
+    if (!user) {
+      return setMessage('❌ Please log in first');
     }
 
-    const { name, price, category } = formData;
-
-    if (!name.trim() || !price || !category) {
-      setError('Please fill in all required fields');
-      return;
+    if (user.role !== 'admin') {
+      return setMessage('❌ Admin privileges required');
     }
 
-    if (parseFloat(price) <= 0) {
-      setError('Price must be greater than 0');
-      return;
+    if (!name || !price || !category) {
+      return setMessage('⚠️ Please fill all required fields');
     }
+
+    const numericPrice = parseFloat(price);
+    if (isNaN(numericPrice) || numericPrice <= 0) {
+      return setMessage('⚠️ Please enter a valid price');
+    }
+
+    setLoading(true);
+    setMessage('');
+
+    const requestData = {
+      name: name.trim(),
+      price: numericPrice,
+      category: category.trim(),
+      image: image.trim() || 'https://via.placeholder.com/300x200?text=No+Image'
+    };
+
+    console.log('📤 Sending request:', {
+      url: '/menu',
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${getToken()?.substring(0, 20)}...`,
+        'Content-Type': 'application/json'
+      },
+      data: requestData
+    });
 
     try {
-      setLoading(true);
-      setError('');
-      setMessage('');
-
-      const submitData = {
-        name: name.trim(),
-        price: parseFloat(price),
-        category: category.trim(),
-        image: formData.image.trim(),
-        description: formData.description.trim()
-      };
-
-      console.log('➕ Submitting menu item:', submitData);
-      console.log('🎫 Using token:', getToken() ? 'Present' : 'Missing');
-
-      const response = await api.post('/menu', submitData, {
+      const res = await api.post('/menu', requestData, { 
         headers: { 
           Authorization: `Bearer ${getToken()}`,
           'Content-Type': 'application/json'
-        }
+        } 
       });
 
-      console.log('✅ Item added successfully:', response.data);
-
-      setMessage(`✅ Item "${response.data.item.name}" added successfully!`);
+      console.log('✅ Success response:', res.data);
+      setMessage(`✅ Item "${res.data.name}" added successfully!`);
       
       // Reset form
-      setFormData({
-        name: '',
-        price: '',
-        category: '',
-        image: '',
-        description: ''
-      });
-
-      // Redirect after success
-      setTimeout(() => {
-        navigate('/admin/menu');
-      }, 2000);
-
+      setName('');
+      setPrice('');
+      setCategory('');
+      setImage('');
     } catch (err) {
-      console.error('❌ Add item error:', {
+      console.error('❌ Complete error details:', {
+        message: err.message,
         status: err.response?.status,
+        statusText: err.response?.statusText,
         data: err.response?.data,
-        message: err.message
+        headers: err.response?.headers,
+        config: err.config
       });
-
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error || 
-                          'Failed to add item';
-      setError(errorMessage);
-
-      if (err.response?.status === 401) {
-        setError('Session expired. Please login again.');
-        setTimeout(() => navigate('/login'), 2000);
+      
+      // More detailed error messages
+      if (err.response) {
+        const { status, data } = err.response;
+        
+        switch (status) {
+          case 400:
+            setMessage(`❌ Validation Error: ${data.message || data.error || 'Invalid data'}`);
+            break;
+          case 401:
+            setMessage('❌ Authentication failed. Please log in again.');
+            break;
+          case 403:
+            setMessage('❌ Access denied. Admin privileges required.');
+            break;
+          case 500:
+            setMessage(`❌ Server Error: ${data.message || 'Internal server error'}`);
+            break;
+          default:
+            setMessage(`❌ Error ${status}: ${data.message || data.error || 'Unknown error'}`);
+        }
+      } else if (err.request) {
+        setMessage('❌ Network error. Please check your connection.');
+        console.error('Network error:', err.request);
+      } else {
+        setMessage(`❌ Error: ${err.message}`);
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // Check if user is admin
-  if (user?.role !== 'admin') {
-    return (
-      <div className="max-w-xl mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h2 className="text-red-800 font-semibold mb-2">Access Denied</h2>
-          <p className="text-red-700">Admin access required to add menu items.</p>
-        </div>
-      </div>
-    );
-  }
+  // Show user info for debugging
+  const userInfo = user ? `${user.name} (${user.role})` : 'Not logged in';
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold text-green-700">➕ Add New Menu Item</h2>
-        <p className="text-gray-600 mt-2">Add a new item to the menu</p>
+    <div className="max-w-xl mx-auto p-6">
+      <h2 className="text-2xl font-bold mb-4 text-green-700">Add New Menu Item</h2>
+      
+      {/* Debug info */}
+      <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
+        <strong>Debug Info:</strong><br/>
+        User: {userInfo}<br/>
+        Token: {getToken() ? 'Present' : 'Missing'}<br/>
+        Can Add Items: {user?.role === 'admin' ? 'Yes' : 'No'}
       </div>
 
       {message && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-green-800">{message}</p>
+        <div className={`mb-4 p-3 rounded text-sm font-medium text-center ${
+          message.includes('✅') 
+            ? 'bg-green-100 text-green-700 border border-green-200' 
+            : 'bg-red-100 text-red-700 border border-red-200'
+        }`}>
+          {message}
         </div>
       )}
 
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-800">{error}</p>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow">
         {/* Item Name */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
             Item Name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder="e.g., Masala Dosa"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="E.g. Masala Dosa"
             required
+            disabled={loading}
           />
         </div>
 
         {/* Price */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
             Price (₹) <span className="text-red-500">*</span>
           </label>
           <input
             type="number"
-            name="price"
-            value={formData.price}
-            onChange={handleChange}
-            placeholder="e.g., 75"
-            min="0"
             step="0.01"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            min="0.01"
+            className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="E.g. 75"
             required
+            disabled={loading}
           />
         </div>
 
         {/* Category */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
             Category <span className="text-red-500">*</span>
           </label>
           <select
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
             required
+            disabled={loading}
           >
             <option value="">-- Select Category --</option>
-            {categories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
+            <option value="Breakfast">Breakfast</option>
+            <option value="Dosa">Dosa</option>
+            <option value="Soups">Soups</option>
+            <option value="Chats">Chats</option>
+            <option value="Indian Breads">Indian Breads</option>
+            <option value="Paneer Dishes">Paneer Dishes</option>
+            <option value="Vegies Dishes">Vegies Dishes</option>
+            <option value="Snacks">Snacks</option>
+            <option value="Beverages">Beverages</option>
+            <option value="Dessert">Dessert</option>
+            <option value="Thali">Thali</option>
           </select>
         </div>
 
         {/* Image URL */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
             Image URL
           </label>
           <input
             type="url"
-            name="image"
-            value={formData.image}
-            onChange={handleChange}
             placeholder="https://example.com/image.jpg"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={image}
+            onChange={(e) => setImage(e.target.value)}
+            disabled={loading}
           />
-        </div>
-
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Description
-          </label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            placeholder="Optional description of the dish..."
-            rows={3}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-          />
+          <p className="text-xs text-gray-500 mt-1">
+            Optional: Leave empty for default placeholder image
+          </p>
         </div>
 
         {/* Image Preview */}
-        {formData.image && (
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              🔍 Image Preview:
-            </label>
+        {image && (
+          <div className="mt-4">
+            <p className="text-sm text-gray-600 mb-1">🔍 Preview:</p>
             <img
-              src={formData.image}
+              src={image}
               alt="Preview"
-              className="w-full h-48 object-cover border rounded-lg shadow"
+              className="w-full h-48 object-cover border rounded shadow"
               onError={(e) => {
                 e.target.src = 'https://via.placeholder.com/300x200?text=Invalid+URL';
               }}
@@ -263,20 +240,22 @@ export default function AddItem() {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={loading}
-          className={`w-full py-3 px-4 rounded-md font-semibold text-white transition-colors ${
-            loading 
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-green-600 hover:bg-green-700 active:bg-green-800'
+          disabled={loading || user?.role !== 'admin'}
+          className={`w-full py-2 px-4 rounded font-semibold transition-colors ${
+            loading || user?.role !== 'admin'
+              ? 'bg-gray-400 cursor-not-allowed text-gray-200' 
+              : 'bg-green-600 hover:bg-green-700 text-white'
           }`}
         >
           {loading ? (
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            <div className="flex items-center justify-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               Adding Item...
             </div>
+          ) : user?.role !== 'admin' ? (
+            'Admin Access Required'
           ) : (
-            'Add Menu Item'
+            'Add Item'
           )}
         </button>
       </form>
