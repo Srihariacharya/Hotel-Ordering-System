@@ -92,7 +92,6 @@ export default function AdminMenuDashboard() {
 
   return (
     <>
-      <Navbar /> {/* ✅ Keeps navbar always visible */}
       <div className="p-6 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Admin Menu Dashboard</h2>

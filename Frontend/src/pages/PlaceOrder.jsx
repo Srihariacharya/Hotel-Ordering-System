@@ -120,7 +120,7 @@ export default function PlaceOrder() {
 
   return (
     <section className="max-w-2xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6 text-center text-green-700 dark:text-green-300">
+      <h1 className="text-3xl font-bold mb-6 text-center text-green-700 dark:text-green-700">
         Confirm Order
       </h1>
 
@@ -131,20 +131,20 @@ export default function PlaceOrder() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h3 className="text-lg font-semibold mb-4">Order Items</h3>
+        <h3 className="text-black font-semibold mb-4">Order Items</h3>
         <ul className="space-y-2">
           {cartItems.map(item => (
             <li key={item._id} className="flex justify-between items-center border-b pb-2">
               <div>
-                <span className="font-medium">{item.name}</span>
+                <span className="font-medium text-gray-900">{item.name}</span>
                 <span className="text-gray-500 ml-2">× {item.qty}</span>
               </div>
-              <span className="font-medium">₹{(item.price * item.qty).toFixed(2)}</span>
+              <span className="font-medium  text-gray-900">₹{(item.price * item.qty).toFixed(2)}</span>
             </li>
           ))}
         </ul>
         <div className="border-t pt-4 mt-4">
-          <div className="flex justify-between text-lg font-semibold">
+          <div className="flex justify-between text-green-600 font-semibold">
             <span>Total</span>
             <span className="text-green-600">₹{cartTotal.toFixed(2)}</span>
           </div>
@@ -189,21 +189,6 @@ export default function PlaceOrder() {
         </button>
       </form>
 
-      {import.meta.env.MODE === 'development' && (
-        <div className="mt-8 p-4 bg-gray-100 rounded text-xs">
-          <strong>Debug Info:</strong>
-          <pre>{JSON.stringify(
-            {
-              hasUser: !!user,
-              hasToken: !!getToken(),
-              cartItems: cartItems.length,
-              tableNumber,
-            },
-            null,
-            2
-          )}</pre>
-        </div>
-      )}
     </section>
   );
 }

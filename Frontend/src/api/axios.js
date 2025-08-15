@@ -1,79 +1,81 @@
+// src/api/axios.js
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.MODE === 'development'
-  ? 'http://localhost:5000'
-  : 'https://hotel-ordering-system-production.up.railway.app';
-
-console.log('🌐 API Base URL:', BASE_URL);
+const API_BASE_URL = 'http://localhost:5000';
 
 const api = axios.create({
-  baseURL: BASE_URL,
-  timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Request interceptor with enhanced debugging
+// ✅ Request Interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
-    
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('🎫 Request with token:', {
-        url: config.url,
-        method: config.method?.toUpperCase(),
-        token: `${token.substring(0, 30)}...`,
-        headers: config.headers.Authorization
-      });
+    const publicRoutes = ['/auth/login', '/auth/register', '/auth/refresh'];
+    const isPublicRoute = publicRoutes.some(route => config.url?.includes(route));
+
+    if (!isPublicRoute) {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('🔑 Token attached to:', config.url);
+      } else {
+        console.warn('⚠️ No token found for protected route:', config.url);
+      }
     } else {
-      console.warn('⚠️ Request without token:', {
-        url: config.url,
-        method: config.method?.toUpperCase()
-      });
+      console.log('🌐 Public route request:', config.url);
     }
-    
+
     return config;
   },
-  (error) => {
-    console.error('❌ Request interceptor error:', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor with enhanced error handling
+// ✅ Response Interceptor
 api.interceptors.response.use(
-  (response) => {
-    console.log('✅ API Response:', {
-      status: response.status,
-      url: response.config.url,
-      method: response.config.method?.toUpperCase()
-    });
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    console.error('❌ API Error:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      url: error.config?.url,
-      method: error.config?.method?.toUpperCase(),
-      data: error.response?.data,
-      message: error.message,
-    });
+    const originalRequest = error.config;
+    console.error('❌ API Error:', error.response?.data || error.message);
 
-    if (error.response?.status === 401) {
-      console.warn('🔒 401 Unauthorized - clearing auth data');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      
-      if (!window.location.pathname.includes('/login')) {
-        console.log('🔄 Redirecting to login');
-        window.location.href = '/login';
+    // If 401 and not already retried
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      const authRoutes = ['/auth/login', '/auth/register', '/auth/refresh'];
+      const isAuthRoute = authRoutes.some(route => originalRequest.url?.includes(route));
+
+      if (isAuthRoute) {
+        console.log('🚫 Auth route 401 - no refresh attempt');
+        return Promise.reject(error);
+      }
+
+      console.log('🔄 Token expired - attempting refresh...');
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) throw new Error('No refresh token available');
+
+        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+
+        // Save new tokens
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        // Retry original request
+        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.error('❌ Refresh token failed:', refreshError);
+        localStorage.clear();
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(refreshError);
       }
     }
-    
+
     return Promise.reject(error);
   }
 );

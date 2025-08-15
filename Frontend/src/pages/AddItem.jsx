@@ -123,24 +123,6 @@ export default function AddItem() {
   return (
     <div className="max-w-xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-4 text-green-700">Add New Menu Item</h2>
-      
-      {/* Debug info */}
-      <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
-        <strong>Debug Info:</strong><br/>
-        User: {userInfo}<br/>
-        Token: {getToken() ? 'Present' : 'Missing'}<br/>
-        Can Add Items: {user?.role === 'admin' ? 'Yes' : 'No'}
-      </div>
-
-      {message && (
-        <div className={`mb-4 p-3 rounded text-sm font-medium text-center ${
-          message.includes('✅') 
-            ? 'bg-green-100 text-green-700 border border-green-200' 
-            : 'bg-red-100 text-red-700 border border-red-200'
-        }`}>
-          {message}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow">
         {/* Item Name */}

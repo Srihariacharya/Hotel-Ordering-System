@@ -4,16 +4,17 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const connectDB = require('./config/db'); // your DB connection module
 const bcrypt = require('bcryptjs');
+
+const connectDB = require('./config/db');
 const User = require('./models/User');
 
-// Import routes (make sure these files exist)
+// Routes
 const authRoutes = require('./routes/authRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const orderRoutes = require('./routes/orderRoutes'); // optional
 
-// Validate required environment variables
+// ===== Validate Environment Variables =====
 if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
   console.error('❌ Missing ACCESS_TOKEN_SECRET or REFRESH_TOKEN_SECRET in .env');
   process.exit(1);
@@ -23,45 +24,43 @@ if (!process.env.MONGO_URI) {
   process.exit(1);
 }
 
-// Connect to MongoDB
+// ===== Connect to MongoDB =====
 connectDB();
 
 const app = express();
 
-// Global Middleware
+// ===== Global Middleware =====
 app.use(helmet());
-app.use(express.json());
+app.use(express.json()); // Parse JSON bodies
+app.use(express.urlencoded({ extended: true })); // Parse form-data bodies
 
+// ===== CORS Settings =====
 const allowedOrigins = [
-  'http://localhost:5173',                // your frontend dev port
-  'https://magical-alpaca-fa7f48.netlify.app'  // production frontend, for example
+  'http://localhost:5173', // local dev frontend
+  'https://magical-alpaca-fa7f48.netlify.app' // production frontend
 ];
 
 app.use(cors({
-  origin: function(origin, callback) {
-    // allow requests with no origin like Postman or curl
-    if (!origin) return callback(null, true);
-
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // Allow Postman/curl with no origin
     if (!allowedOrigins.includes(origin)) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+      return callback(new Error('Not allowed by CORS'), false);
     }
-
     return callback(null, true);
   },
-  credentials: true, // allow cookies, authorization headers with credentials
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Rate limiting
+// ===== Rate Limiting =====
 app.use(rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 150,
   message: 'Too many requests from this IP, please try again later.',
 }));
 
-// Temporary admin seeding (run once at startup)
+// ===== Admin Seeding (run once) =====
 (async () => {
   try {
     const existingAdmin = await User.findOne({ email: 'admin@example.com' });
@@ -82,31 +81,51 @@ app.use(rateLimit({
   }
 })();
 
-// Basic root route
+// ===== Temporary Cleanup for Double-Hashed Users =====
+(async () => {
+  try {
+    console.log('🧹 Checking for double-hashed user passwords...');
+    const users = await User.find({ email: { $ne: 'admin@example.com' } });
+
+    for (const user of users) {
+      if (user.password && user.password.length > 100) {
+        console.log('🗑️ Removing possibly corrupted user:', user.email);
+        await User.findByIdAndDelete(user._id);
+      }
+    }
+    console.log('✅ User cleanup completed');
+  } catch (err) {
+    console.error('❌ User cleanup error:', err.message);
+  }
+})();
+
+// ===== Root Route =====
 app.get('/', (_req, res) => {
   res.send('🚀 Hotel Ordering API running');
 });
 
-// Mount routes
-app.use('/auth', authRoutes);    // e.g. POST /auth/login, /auth/register, /auth/refresh
-app.use('/menu', menuRoutes);    // e.g. GET /menu
-app.use('/order', orderRoutes);  // if implemented
+// ===== API Routes =====
+app.use('/auth', authRoutes);
+app.use('/menu', menuRoutes);
+app.use('/order', orderRoutes);
 
-// 404 fallback for unknown routes
+// ===== 404 Handler =====
 app.use((req, res) => {
-  res.status(404).send('404 Not Found — requested resource could not be found.');
+  res.status(404).json({ error: '404 Not Found' });
 });
 
-// Global error handler
+// ===== Global Error Handler =====
 app.use((err, _req, res, _next) => {
-  console.error('💥', err.stack || err.message);
+  console.error('💥 Error:', err.stack || err.message);
   res.status(err.status || 500).json({ error: err.message || 'Server Error' });
 });
 
-// Log secrets to verify env variables (remove in production)
+// ===== Verify Secrets Loaded =====
 console.log('ACCESS_TOKEN_SECRET:', process.env.ACCESS_TOKEN_SECRET ? 'Loaded' : 'Missing');
 console.log('REFRESH_TOKEN_SECRET:', process.env.REFRESH_TOKEN_SECRET ? 'Loaded' : 'Missing');
 
-// Start server
+// ===== Start Server =====
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`✅ Server running on http://localhost:${PORT}`);
+});

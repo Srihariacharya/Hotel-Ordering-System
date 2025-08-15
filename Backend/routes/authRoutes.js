@@ -6,7 +6,7 @@ const { generateTokens } = require('../utils/jwt');
 
 const router = express.Router();
 
-// ✅ FIXED Register Route
+// ✅ FIXED Register Route - Remove manual hashing
 router.post('/register', async (req, res) => {
   try {
     let { name = '', email = '', password = '' } = req.body;
@@ -26,11 +26,12 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    // ✅ CRITICAL FIX: Let the User model handle password hashing
+    // Don't hash password here - the User model's pre('save') will do it
     const user = await User.create({ 
       name, 
       email, 
-      password: hashed, 
+      password, // Raw password - let model hash it
       role: 'user' 
     });
 
@@ -74,14 +75,14 @@ router.post('/login', async (req, res) => {
 
     console.log('👤 User found:', { id: user._id, name: user.name, role: user.role });
 
-    // Compare password
-    const isMatch = await bcrypt.compare(password.trim(), user.password);
+    // ✅ Use the User model's comparePassword method
+    const isMatch = await user.comparePassword(password.trim());
     if (!isMatch) {
       console.warn('⚠️ Password mismatch for:', email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // ✅ CRITICAL: Generate tokens using fixed utility
+    // ✅ Generate tokens using fixed utility
     const { accessToken, refreshToken } = generateTokens(user);
 
     console.log('✅ Login successful for:', email);
