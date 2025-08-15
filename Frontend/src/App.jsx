@@ -1,6 +1,5 @@
 // src/App.jsx
 import { Routes, Route, Navigate } from 'react-router-dom';
-
 import './index.css';
 
 // Pages
@@ -42,10 +41,8 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <Routes>
-
-            {/* ✅ Routes using shared layout */}
+            {/* ✅ Routes using shared layout (Navbar included) */}
             <Route element={<Layout />}>
-
               <Route index element={<Home />} />
               <Route path="menu" element={<Menu />} />
               <Route path="cart" element={<Cart />} />
@@ -69,7 +66,6 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-
               <Route
                 path="admin/analytics"
                 element={
@@ -78,7 +74,6 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-
               <Route
                 path="admin/update-images"
                 element={
@@ -87,41 +82,37 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="admin/menu"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <AdminMenuDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="admin/add-item"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <AddItem />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="admin/edit-item/:id"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <EditItem />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
-            {/* 🚫 Routes that don’t use the layout */}
+            {/* 🚫 Routes without layout (No navbar) */}
             <Route path="/login" element={<Login />} />
-            <Route path="/auth/register" element={<Register />} />
+            <Route path="/register" element={<Register />} /> {/* 🔹 Changed */}
             <Route path="/invoice/:id" element={<Invoice />} />
             <Route path="/order/success" element={<OrderSuccess />} />
-
-            {/* 🧾 Admin-only routes (outside layout) */}
-            <Route
-              path="/admin/menu"
-              element={
-                <ProtectedRoute adminOnly>
-                  <AdminMenuDashboard />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/admin/add-item"
-              element={
-                <ProtectedRoute adminOnly>
-                  <AddItem />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/admin/edit-item/:id"
-              element={
-                <ProtectedRoute adminOnly>
-                  <EditItem />
-                </ProtectedRoute>
-              }
-            />
 
             {/* 🌐 Catch-all route */}
             <Route path="*" element={<Navigate to="/" replace />} />
