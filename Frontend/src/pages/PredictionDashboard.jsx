@@ -108,16 +108,29 @@ const PredictionDashboard = () => {
     return 'text-red-600';
   };
 
-  const COLORS = ['#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
+  const COLOR = ['#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
-  const pieDataMap = {};
-  predictions.forEach(pred => {
-    pred.predictions?.forEach(item => {
-      const name = item.menuItem?.name || 'Unknown';
-      pieDataMap[name] = (pieDataMap[name] || 0) + item.predictedQuantity;
-    });
+const pieDataMap = {};
+predictions.forEach(pred => {
+  pred.predictions?.forEach(item => {
+    const name = item.menuItem?.name || 'Unknown';
+    pieDataMap[name] = (pieDataMap[name] || 0) + item.predictedQuantity;
   });
-  const pieChartData = Object.entries(pieDataMap).map(([name, value]) => ({ name, value }));
+});
+
+let pieChartData = Object.entries(pieDataMap)
+  .map(([name, value]) => ({ name, value }))
+  .sort((a, b) => b.value - a.value); // sort descending
+
+const TOP_N = 5;
+let othersValue = 0;
+if (pieChartData.length > TOP_N) {
+  othersValue = pieChartData.slice(TOP_N).reduce((sum, item) => sum + item.value, 0);
+  pieChartData = pieChartData.slice(0, TOP_N);
+  pieChartData.push({ name: 'Others', value: othersValue });
+}
+
+const COLORS = ['#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#A78BFA'];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
@@ -295,31 +308,38 @@ const PredictionDashboard = () => {
             </div>
 
             {/* Pie Chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Top Menu Items</h2>
-              {pieChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={pieChartData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      fill="#8884d8"
-                      label={(entry) => `${entry.name}: ${entry.value}`}
-                    >
-                      {pieChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : <p className="text-center text-gray-500 dark:text-gray-400">No menu item data.</p>}
-            </div>
+           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Top Menu Items</h2>
+             {pieChartData.length > 0 ? (
+               <ResponsiveContainer width="100%" height={300}>
+               <PieChart>
+               <Pie
+                 data={pieChartData}
+                 dataKey="value"
+                 nameKey="name"
+                 cx="50%"
+                 cy="50%"
+                 outerRadius={100}
+                 fill="#8884d8"
+                 label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                >
+                 {pieChartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLOR[index % COLOR.length]} />
+                 ))}
+              </Pie>
+              <Tooltip formatter={(value) => [`${value}`, 'Qty']} />
+               <Legend
+                  layout="vertical"
+                  verticalAlign="middle"
+                  align="right"
+                  wrapperStyle={{ maxHeight: 250, overflowY: 'auto' }}
+               />
+               </PieChart>
+               </ResponsiveContainer>
+                 ) : (
+                   <p className="text-center text-gray-500 dark:text-gray-400">No menu item data.</p>
+                )}
+           </div>
           </div>
         </div>
       </div>
