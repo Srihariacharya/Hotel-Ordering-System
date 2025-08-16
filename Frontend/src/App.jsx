@@ -19,6 +19,7 @@ import AdminMenuDashboard from './pages/AdminMenuDashboard';
 import EditItem from './pages/EditItem';
 import Invoice from './pages/Invoice';
 import PredictionDashboard from './pages/PredictionDashboard';
+import PredictionPage from "./pages/PredictionPage";
 
 // Layout & Context
 import Layout from './components/Layout';
@@ -107,6 +108,11 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/prediction" element={
+                  <ProtectedRoute adminOnly>
+                    <PredictionPage />
+                  </ProtectedRoute>
+              } />
             </Route>
 
             {/* 🚫 Routes without layout (No navbar) */}

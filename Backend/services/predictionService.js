@@ -1,7 +1,8 @@
+// Backend/services/predictionService.js
 const Order = require('../models/Order');
 const MenuItem = require('../models/MenuItem');
-const PredictionData = require('../models/PredictionData');
-const Prediction = require('../models/Prediction');
+const PredictionData = require('../models/PredictionData'); // Historical orders
+const Prediction = require('../models/Prediction');         // Generated predictions
 
 class PredictionService {
   
@@ -9,23 +10,29 @@ class PredictionService {
   async collectHistoricalData() {
     try {
       console.log('🔄 Collecting historical data for prediction model...');
-      
+
+      // Get orders from last 90 days
       const orders = await Order.find({
-        createdAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } // Last 90 days
+        createdAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
       }).populate('items.menuItem');
+
+      if (orders.length === 0) {
+        console.warn('⚠️ No historical orders found');
+        return 0;
+      }
 
       const dataPoints = new Map();
 
       for (const order of orders) {
         const date = new Date(order.createdAt);
         const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}`;
-        
+
         if (!dataPoints.has(dateKey)) {
           dataPoints.set(dateKey, {
             date: new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours()),
             hour: date.getHours(),
             dayOfWeek: date.getDay(),
-            weather: await this.getWeatherData(date), // Mock weather data
+            weather: await this.getWeatherData(date),
             isHoliday: this.isHoliday(date),
             actualOrders: [],
             totalOrderCount: 0,
@@ -37,12 +44,13 @@ class PredictionService {
         dataPoint.totalOrderCount++;
         dataPoint.totalRevenue += order.totalAmount;
 
-        // Add menu items
         for (const item of order.items) {
+          if (!item.menuItem || !item.menuItem._id) continue;
+
           const existingItem = dataPoint.actualOrders.find(
             ao => ao.menuItem.toString() === item.menuItem._id.toString()
           );
-          
+
           if (existingItem) {
             existingItem.quantity += item.quantity;
             existingItem.revenue += item.price * item.quantity;
@@ -56,188 +64,173 @@ class PredictionService {
         }
       }
 
-      // Save to database
+      // Save all data points to DB
+      let savedCount = 0;
       for (const [key, data] of dataPoints) {
-        await PredictionData.findOneAndUpdate(
-          { date: data.date, hour: data.hour },
-          data,
-          { upsert: true }
-        );
+        try {
+          await PredictionData.findOneAndUpdate(
+            { date: data.date, hour: data.hour },
+            data,
+            { upsert: true }
+          );
+          savedCount++;
+        } catch (error) {
+          console.warn(`⚠️ Failed to save data point for ${data.date}:`, error.message);
+        }
       }
 
-      console.log(`✅ Collected ${dataPoints.size} data points for training`);
-      return dataPoints.size;
+      console.log(`✅ Collected and saved ${savedCount} data points for training`);
+      return savedCount;
     } catch (error) {
       console.error('❌ Error collecting historical data:', error);
-      throw error;
+      throw new Error('Failed to collect historical data: ' + error.message);
     }
   }
 
-  // Simple prediction algorithm (can be replaced with ML model)
+  // Generate predictions for a given date and hour
   async generatePredictions(targetDate, targetHour) {
     try {
       console.log(`🔮 Generating predictions for ${targetDate} at hour ${targetHour}`);
 
       const dayOfWeek = new Date(targetDate).getDay();
-      
-      // Get historical data for same day of week and hour
-      const historicalData = await PredictionData.find({
-        dayOfWeek: dayOfWeek,
-        hour: targetHour
-      }).populate('actualOrders.menuItem');
 
-      if (historicalData.length === 0) {
-        throw new Error('Insufficient historical data for prediction');
+      // Get historical data for same day & hour
+      let historicalData = await PredictionData.find({
+        dayOfWeek,
+        hour: targetHour
+      }).populate('actualOrders.menuItem').lean();
+
+      if (!historicalData || historicalData.length === 0) {
+        // Fallback: data for same hour across all days
+        const fallbackData = await PredictionData.find({ hour: targetHour })
+          .populate('actualOrders.menuItem').limit(10);
+        if (!fallbackData || fallbackData.length === 0) {
+          throw new Error('Insufficient historical data for prediction');
+        }
+        console.log(`⚠️ Using fallback data: ${fallbackData.length} records`);
+        historicalData = fallbackData;
       }
 
-      // Calculate averages and trends
-      const menuItemPredictions = new Map();
+      const allMenuItems = await MenuItem.find({ isAvailable: true });
+      if (!allMenuItems || allMenuItems.length === 0) {
+        throw new Error('No menu items available for prediction');
+      }
+
+      const menuItemStats = new Map();
       let totalOrdersSum = 0;
       let totalRevenueSum = 0;
 
       for (const data of historicalData) {
-        totalOrdersSum += data.totalOrderCount;
-        totalRevenueSum += data.totalRevenue;
+        totalOrdersSum += data.totalOrderCount || 0;
+        totalRevenueSum += data.totalRevenue || 0;
 
-        for (const order of data.actualOrders) {
+        for (const order of data.actualOrders || []) {
+          if (!order.menuItem || !order.menuItem._id) continue;
+
           const menuId = order.menuItem._id.toString();
-          
-          if (!menuItemPredictions.has(menuId)) {
-            menuItemPredictions.set(menuId, {
-              menuItem: order.menuItem,
-              quantities: [],
-              revenues: []
-            });
+          if (!menuItemStats.has(menuId)) {
+            menuItemStats.set(menuId, { menuItem: order.menuItem, quantities: [], revenues: [] });
           }
-          
-          menuItemPredictions.get(menuId).quantities.push(order.quantity);
-          menuItemPredictions.get(menuId).revenues.push(order.revenue);
+
+          menuItemStats.get(menuId).quantities.push(order.quantity || 0);
+          menuItemStats.get(menuId).revenues.push(order.revenue || 0);
         }
       }
 
-      // Generate predictions with confidence scores
+      // Build predictions array
       const predictions = [];
-      
-      for (const [menuId, data] of menuItemPredictions) {
-        const avgQuantity = data.quantities.reduce((a, b) => a + b, 0) / data.quantities.length;
-        const variance = data.quantities.reduce((acc, val) => acc + Math.pow(val - avgQuantity, 2), 0) / data.quantities.length;
-        const confidence = Math.max(0.1, Math.min(0.95, 1 - (variance / (avgQuantity + 1))));
+      for (const menuItem of allMenuItems) {
+        const menuId = menuItem._id.toString();
+        const stats = menuItemStats.get(menuId);
 
-        // Apply trend and seasonal adjustments
+        let avgQuantity = 0;
+        let confidence = 0.1;
+        if (stats && stats.quantities.length > 0) {
+          avgQuantity = stats.quantities.reduce((a, b) => a + b, 0) / stats.quantities.length;
+          const variance = stats.quantities.reduce((acc, val) => acc + Math.pow(val - avgQuantity, 2), 0) / stats.quantities.length;
+          confidence = Math.max(0.1, Math.min(0.95, 1 - (variance / (avgQuantity + 1))));
+        }
+
         const trendMultiplier = this.calculateTrendMultiplier(targetDate, dayOfWeek, targetHour);
         const seasonalMultiplier = this.calculateSeasonalMultiplier(targetDate);
         const weatherMultiplier = await this.getWeatherMultiplier(targetDate);
 
-        const predictedQuantity = Math.round(avgQuantity * trendMultiplier * seasonalMultiplier * weatherMultiplier);
+        const predictedQuantity = Math.max(0, Math.round(avgQuantity * trendMultiplier * seasonalMultiplier * weatherMultiplier));
 
-        predictions.push({
-          menuItem: data.menuItem._id,
-          predictedQuantity: Math.max(0, predictedQuantity),
-          confidence: confidence,
-          factors: [
-            { factor: 'historical_average', impact: avgQuantity },
-            { factor: 'trend_adjustment', impact: trendMultiplier },
-            { factor: 'seasonal_adjustment', impact: seasonalMultiplier },
-            { factor: 'weather_impact', impact: weatherMultiplier }
-          ]
-        });
+        if (predictedQuantity > 0 || avgQuantity > 0) {
+          predictions.push({
+            menuItem: menuItem._id,
+            predictedQuantity,
+            confidence,
+            factors: [
+              { factor: 'historical_average', impact: avgQuantity },
+              { factor: 'trend_adjustment', impact: trendMultiplier },
+              { factor: 'seasonal_adjustment', impact: seasonalMultiplier },
+              { factor: 'weather_impact', impact: weatherMultiplier }
+            ]
+          });
+        }
       }
 
-      // Calculate totals
       const totalPredictedOrders = predictions.reduce((sum, p) => sum + p.predictedQuantity, 0);
-      const avgRevenue = totalRevenueSum / historicalData.length;
-      const totalPredictedRevenue = Math.round(avgRevenue * (totalPredictedOrders / (totalOrdersSum / historicalData.length)));
+      const avgRevenue = historicalData.length > 0 ? totalRevenueSum / historicalData.length : 1000;
+      const avgOrderCount = historicalData.length > 0 ? totalOrdersSum / historicalData.length : 1;
+      const revenuePerOrder = avgOrderCount > 0 ? avgRevenue / avgOrderCount : 500;
+      const totalPredictedRevenue = Math.round(totalPredictedOrders * revenuePerOrder);
 
-      // Save prediction
-      const predictionDoc = new Prediction({
-        predictionFor: new Date(targetDate),
-        hour: targetHour,
-        predictions: predictions,
-        totalPredictedOrders: totalPredictedOrders,
-        totalPredictedRevenue: totalPredictedRevenue,
-        weatherData: await this.getWeatherData(new Date(targetDate))
-      });
+      // Upsert prediction
+      let predictionDoc = await Prediction.findOne({ predictionFor: new Date(targetDate), hour: targetHour });
+      if (predictionDoc) {
+        predictionDoc = await Prediction.findByIdAndUpdate(
+          predictionDoc._id,
+          { predictions, totalPredictedOrders, totalPredictedRevenue, weatherData: await this.getWeatherData(new Date(targetDate)) },
+          { new: true }
+        );
+      } else {
+        predictionDoc = new Prediction({ predictionFor: new Date(targetDate), hour: targetHour, predictions, totalPredictedOrders, totalPredictedRevenue, weatherData: await this.getWeatherData(new Date(targetDate)) });
+        await predictionDoc.save();
+      }
 
-      await predictionDoc.save();
-      
-      console.log(`✅ Generated ${predictions.length} item predictions`);
+      console.log(`✅ Generated ${predictions.length} item predictions (${totalPredictedOrders} total orders)`);
       return predictionDoc;
+
     } catch (error) {
       console.error('❌ Error generating predictions:', error);
-      throw error;
+      throw new Error('Failed to generate predictions: ' + error.message);
     }
   }
 
-  // Helper methods
+  // Trend, seasonal, weather helper methods
   calculateTrendMultiplier(date, dayOfWeek, hour) {
-    // Simple trend calculation - in real app, use more sophisticated algorithms
     const now = new Date();
     const daysDiff = Math.floor((new Date(date) - now) / (1000 * 60 * 60 * 24));
-    
-    // Weekend boost
     const weekendBoost = (dayOfWeek === 0 || dayOfWeek === 6) ? 1.2 : 1.0;
-    
-    // Peak hours boost
-    const peakHoursBoost = (hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21) ? 1.3 : 1.0;
-    
-    return weekendBoost * peakHoursBoost;
+    const peakHoursBoost = (hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21) ? 1.3 : (hour >= 7 && hour <= 9) ? 1.1 : 1.0;
+    const futureDiscount = Math.max(0.8, 1 - (daysDiff * 0.05));
+    return weekendBoost * peakHoursBoost * futureDiscount;
   }
 
   calculateSeasonalMultiplier(date) {
     const month = new Date(date).getMonth();
-    
-    // Seasonal adjustments (example)
-    const seasonalFactors = {
-      0: 0.9,  // January
-      1: 0.95, // February
-      2: 1.0,  // March
-      3: 1.1,  // April
-      4: 1.2,  // May
-      5: 1.3,  // June
-      6: 1.25, // July
-      7: 1.2,  // August
-      8: 1.1,  // September
-      9: 1.05, // October
-      10: 1.15, // November
-      11: 1.3   // December
-    };
-    
+    const seasonalFactors = {0:0.9,1:0.95,2:1.0,3:1.1,4:1.2,5:1.3,6:1.25,7:1.2,8:1.1,9:1.05,10:1.15,11:1.3};
     return seasonalFactors[month] || 1.0;
   }
 
   async getWeatherMultiplier(date) {
-    // Mock weather impact - integrate with real weather API
     const weather = await this.getWeatherData(date);
-    
-    const weatherMultipliers = {
-      'sunny': 1.1,
-      'rainy': 1.3,  // More delivery orders
-      'cloudy': 1.0,
-      'stormy': 1.4   // Highest delivery demand
-    };
-    
+    const weatherMultipliers = { sunny:1.1, rainy:1.3, cloudy:1.0, stormy:1.4 };
     return weatherMultipliers[weather.condition] || 1.0;
   }
 
   async getWeatherData(date) {
-    // Mock weather data - integrate with OpenWeatherMap API
-    const conditions = ['sunny', 'rainy', 'cloudy', 'stormy'];
-    const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
-    
-    return {
-      temperature: Math.floor(Math.random() * 30) + 15, // 15-45°C
-      condition: randomCondition,
-      humidity: Math.floor(Math.random() * 40) + 40 // 40-80%
-    };
+    const conditions = ['sunny','rainy','cloudy','stormy'];
+    const randomCondition = conditions[Math.floor(Math.random()*conditions.length)];
+    return { temperature: Math.floor(Math.random()*30)+15, condition: randomCondition, humidity: Math.floor(Math.random()*40)+40 };
   }
 
   isHoliday(date) {
-    // Simple holiday detection - extend with real holiday calendar
-    const holidays = [
-      '2024-01-01', '2024-01-26', '2024-08-15', '2024-10-02', '2024-12-25'
-    ];
-    const dateString = date.toISOString().split('T')[0];
-    return holidays.includes(dateString);
+    const holidays = ['2024-01-01','2024-01-26','2024-08-15','2024-10-02','2024-12-25','2025-01-01','2025-01-26','2025-08-15','2025-10-02','2025-12-25'];
+    return holidays.includes(date.toISOString().split('T')[0]);
   }
 
   // Update prediction accuracy after actual results
@@ -250,26 +243,26 @@ class PredictionService {
       let itemCount = 0;
 
       for (const pred of prediction.predictions) {
-        const actual = actualOrders.find(
-          order => order.menuItem.toString() === pred.menuItem.toString()
-        );
-        
+        const actual = actualOrders.find(o => o.menuItem && o.menuItem.toString() === pred.menuItem.toString());
         const actualQuantity = actual ? actual.quantity : 0;
-        const accuracy = 1 - Math.abs(pred.predictedQuantity - actualQuantity) / 
-                        (Math.max(pred.predictedQuantity, actualQuantity, 1));
-        
+        const predictedQuantity = pred.predictedQuantity || 0;
+        const maxQuantity = Math.max(predictedQuantity, actualQuantity, 1);
+        const accuracy = 1 - Math.abs(predictedQuantity - actualQuantity) / maxQuantity;
         totalAccuracy += Math.max(0, accuracy);
         itemCount++;
       }
 
-      prediction.accuracy = totalAccuracy / itemCount;
-      await prediction.save();
-
-      console.log(`✅ Updated prediction accuracy: ${(prediction.accuracy * 100).toFixed(2)}%`);
+      if (itemCount > 0) {
+        prediction.accuracy = totalAccuracy / itemCount;
+        await prediction.save();
+        console.log(`✅ Updated prediction accuracy: ${(prediction.accuracy*100).toFixed(2)}%`);
+      }
     } catch (error) {
       console.error('❌ Error updating prediction accuracy:', error);
     }
   }
 }
 
+// Export instance
 module.exports = new PredictionService();
+module.exports.PredictionService = PredictionService;

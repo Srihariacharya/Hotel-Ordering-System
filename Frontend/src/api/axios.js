@@ -1,30 +1,43 @@
 // src/api/axios.js
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE_URL = 'http://localhost:5000';
+// Figure out API base URL depending on environment
+let API_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
+  process.env.REACT_APP_API_URL ||
+  "http://localhost:5000";
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
   timeout: 10000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { "Content-Type": "application/json" },
 });
+// Debug logging (only in dev)
+const log = (...args) => {
+  if (
+    (typeof import.meta !== "undefined" && import.meta.env?.DEV) ||
+    process.env.NODE_ENV === "development"
+  ) {
+    console.log(...args);
+  }
+};
 
 // ✅ Request Interceptor
 api.interceptors.request.use(
   (config) => {
-    const publicRoutes = ['/auth/login', '/auth/register', '/auth/refresh'];
-    const isPublicRoute = publicRoutes.some(route => config.url?.includes(route));
+    const publicRoutes = ["/auth/login", "/auth/register", "/auth/refresh"];
+    const isPublic = publicRoutes.some((r) => config.url?.includes(r));
 
-    if (!isPublicRoute) {
-      const token = localStorage.getItem('accessToken');
+    if (!isPublic) {
+      const token = localStorage.getItem("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('🔑 Token attached to:', config.url);
+        log("🔑 Token attached →", config.url);
       } else {
-        console.warn('⚠️ No token found for protected route:', config.url);
+        log("⚠️ No token for protected route:", config.url);
       }
     } else {
-      console.log('🌐 Public route request:', config.url);
+      log("🌐 Public route →", config.url);
     }
 
     return config;
@@ -37,40 +50,40 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    console.error('❌ API Error:', error.response?.data || error.message);
+    log("❌ API Error:", error.response?.data || error.message);
 
-    // If 401 and not already retried
     if (error.response?.status === 401 && !originalRequest._retry) {
-      const authRoutes = ['/auth/login', '/auth/register', '/auth/refresh'];
-      const isAuthRoute = authRoutes.some(route => originalRequest.url?.includes(route));
+      const authRoutes = ["/auth/login", "/auth/register", "/auth/refresh"];
+      const isAuthRoute = authRoutes.some((r) => originalRequest.url?.includes(r));
 
       if (isAuthRoute) {
-        console.log('🚫 Auth route 401 - no refresh attempt');
+        log("🚫 Auth route 401 → No refresh attempt");
         return Promise.reject(error);
       }
 
-      console.log('🔄 Token expired - attempting refresh...');
+      log("🔄 Token expired → Trying refresh...");
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) throw new Error('No refresh token available');
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) throw new Error("No refresh token available");
 
-        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+          refreshToken,
+        });
 
-        // Save new tokens
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem("accessToken", data.accessToken);
+        localStorage.setItem("refreshToken", data.refreshToken);
+        localStorage.setItem("user", JSON.stringify(data.user));
 
-        // Retry original request
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        console.error('❌ Refresh token failed:', refreshError);
+        console.error("❌ Refresh token failed:", refreshError);
         localStorage.clear();
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
+
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
         }
         return Promise.reject(refreshError);
       }

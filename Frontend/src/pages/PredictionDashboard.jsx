@@ -1,29 +1,22 @@
+// src/pages/PredictionDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
+  LineChart, Line, BarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import { Brain, TrendingUp, Clock, Target, RefreshCw, Calendar } from 'lucide-react';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
 const PredictionDashboard = () => {
+  const { user } = useAuth(); 
   const [predictions, setPredictions] = useState([]);
   const [accuracyMetrics, setAccuracyMetrics] = useState(null);
   const [loading, setLoading] = useState(false);
   const [training, setTraining] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedHour, setSelectedHour] = useState(new Date().getHours());
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchCurrentPredictions();
@@ -33,10 +26,25 @@ const PredictionDashboard = () => {
   const fetchCurrentPredictions = async () => {
     try {
       setLoading(true);
+      setError(null);
       const { data } = await api.get('/predictions/current');
-      setPredictions(data.predictions || []);
-    } catch (error) {
-      console.error('❌ Error fetching predictions:', error);
+
+      if (data && data.predictions) {
+        const totalOrders = data.predictions.reduce((sum, item) => sum + item.predictedQuantity, 0);
+        const totalRevenue = data.predictions.reduce((sum, item) => sum + (item.menuItem?.price || 0) * item.predictedQuantity, 0);
+
+        setPredictions([{
+          ...data,
+          totalPredictedOrders: totalOrders,
+          totalPredictedRevenue: totalRevenue
+        }]);
+      } else {
+        setPredictions([]);
+      }
+    } catch (err) {
+      console.error('❌ Error fetching predictions:', err);
+      setError(err.response?.data?.details || 'Failed to fetch current predictions');
+      setPredictions([]);
     } finally {
       setLoading(false);
     }
@@ -46,8 +54,8 @@ const PredictionDashboard = () => {
     try {
       const { data } = await api.get('/predictions/accuracy');
       setAccuracyMetrics(data);
-    } catch (error) {
-      console.error('❌ Error fetching accuracy:', error);
+    } catch (err) {
+      console.error('❌ Error fetching accuracy:', err);
     }
   };
 
@@ -55,11 +63,11 @@ const PredictionDashboard = () => {
     try {
       setTraining(true);
       const { data } = await api.post('/predictions/train');
-      alert(`Model trained successfully with ${data.dataPoints} data points!`);
+      alert(data.message || 'Model trained successfully!');
       fetchCurrentPredictions();
-    } catch (error) {
-      console.error('❌ Training error:', error);
-      alert('Training failed: ' + error.response?.data?.message || error.message);
+    } catch (err) {
+      console.error('❌ Training error:', err);
+      alert('Training failed: ' + (err.response?.data?.message || err.message));
     } finally {
       setTraining(false);
     }
@@ -68,15 +76,15 @@ const PredictionDashboard = () => {
   const generatePrediction = async () => {
     try {
       setLoading(true);
-      await api.post('/predictions/generate', {
-        date: selectedDate,
+      const { data } = await api.post('/predictions/generate', {
+        predictionFor: selectedDate,
         hour: selectedHour
       });
-      alert('Prediction generated successfully!');
+      alert(data.message || 'Prediction generated successfully!');
       fetchCurrentPredictions();
-    } catch (error) {
-      console.error('❌ Generation error:', error);
-      alert('Generation failed: ' + error.response?.data?.message || error.message);
+    } catch (err) {
+      console.error('❌ Generation error:', err);
+      alert('Generation failed: ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -102,15 +110,14 @@ const PredictionDashboard = () => {
 
   const COLORS = ['#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
-  // Prepare data for PieChart (top menu items)
-  const pieData = {};
+  const pieDataMap = {};
   predictions.forEach(pred => {
     pred.predictions?.forEach(item => {
-      if (!pieData[item.menuItem?.name]) pieData[item.menuItem?.name] = 0;
-      pieData[item.menuItem?.name] += item.predictedQuantity;
+      const name = item.menuItem?.name || 'Unknown';
+      pieDataMap[name] = (pieDataMap[name] || 0) + item.predictedQuantity;
     });
   });
-  const pieChartData = Object.entries(pieData).map(([name, value]) => ({ name, value }));
+  const pieChartData = Object.entries(pieDataMap).map(([name, value]) => ({ name, value }));
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
@@ -144,6 +151,8 @@ const PredictionDashboard = () => {
           </div>
         </div>
 
+        {error && <p className="text-red-500 mb-4">{error}</p>}
+
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
@@ -155,37 +164,35 @@ const PredictionDashboard = () => {
               <Target className="h-8 w-8 text-blue-500" />
             </div>
           </div>
-
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Accuracy</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {accuracyMetrics ? `${(accuracyMetrics.overallAccuracy * 100).toFixed(1)}%` : '—'}
+                  {accuracyMetrics && accuracyMetrics.overallAccuracy !== null
+                    ? `${(accuracyMetrics.overallAccuracy * 100).toFixed(1)}%` : '—'}
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-500" />
             </div>
           </div>
-
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Predictions</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Orders</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {predictions.reduce((sum, p) => sum + p.totalPredictedOrders, 0)}
+                  {predictions.reduce((sum, p) => sum + (p.totalPredictedOrders || 0), 0)}
                 </p>
               </div>
               <Clock className="h-8 w-8 text-purple-500" />
             </div>
           </div>
-
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Predicted Revenue</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  ₹{predictions.reduce((sum, p) => sum + p.totalPredictedRevenue, 0).toLocaleString()}
+                  ₹{predictions.reduce((sum, p) => sum + (p.totalPredictedRevenue || 0), 0).toLocaleString()}
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-yellow-500" />
@@ -230,8 +237,9 @@ const PredictionDashboard = () => {
           </div>
         </div>
 
-        {/* Current Predictions Timeline */}
+        {/* Current Predictions & Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Predictions List */}
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Upcoming Predictions</h2>
             <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -253,7 +261,7 @@ const PredictionDashboard = () => {
                         <span className="text-gray-700 dark:text-gray-300">{item.menuItem?.name || 'Unknown Item'}</span>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{item.predictedQuantity} qty</span>
-                          <span className={`text-xs ${getConfidenceColor(item.confidence)}`}>{(item.confidence * 100).toFixed(0)}%</span>
+                          <span className={`text-xs ${getConfidenceColor(item.confidence || 0)}`}>{((item.confidence || 0) * 100).toFixed(0)}%</span>
                         </div>
                       </div>
                     ))}

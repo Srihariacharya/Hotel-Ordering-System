@@ -1,21 +1,14 @@
-// src/api.js
+import API_BASE_URL from './api';
 
-// ✅ Better environment detection
-const isProduction = 
-  import.meta.env.PROD || // Vite production flag
-  import.meta.env.MODE === "production" || 
-  window.location.hostname !== "localhost";
+// api.js
 
-// ✅ Use environment variable first, then fallback
-const API_BASE_URL = 
-  import.meta.env.VITE_API_BASE_URL || 
-  (isProduction 
-    ? "https://hotel-ordering-system-production.up.railway.app" 
-    : "http://localhost:5000");
+// Dynamically set the base URL depending on the environment
+const API_BASE_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:5000" // Local backend during development
+    : "https://hotel-ordering-system-production.up.railway.app";
 
-console.log("🌐 API Base URL (from api.js):", API_BASE_URL);
-
-// Example API call
+// Example API call (you can remove this if not needed here)
 export const fetchMenu = async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/menu`);

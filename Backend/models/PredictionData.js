@@ -1,9 +1,10 @@
-const mongoose = require('mongoose');
+// Backend/models/PredictionData.js
+const mongoose = require("mongoose");
 
 const predictionDataSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   hour: { type: Number, required: true }, // 0-23
-  dayOfWeek: { type: Number, required: true }, // 0-6 (Sunday=0)
+  dayOfWeek: { type: Number, required: true }, // 0-6
   weather: {
     temperature: Number,
     condition: String, // sunny, rainy, cloudy

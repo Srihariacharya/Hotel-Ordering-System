@@ -1,135 +1,165 @@
-const express = require('express');
+// Backend/routes/predictionRoutes.js
+const express = require("express");
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
-const predictionService = require('../services/predictionService');
-const Prediction = require('../models/Prediction');
+const { protect } = require("../middleware/authMiddleware");
+const PredictionService = require("../services/predictionService"); // ✅ Our updated service
+const PredictionData = require("../models/PredictionData");
+const Prediction = require("../models/Prediction");
+const MenuItem = require("../models/MenuItem");
 
-// GET /predictions/train - Train the model with historical data
-router.post('/train', protect('admin'), async (req, res) => {
-  try {
-    console.log('🧠 Training prediction model...');
-    const dataPoints = await predictionService.collectHistoricalData();
-    
-    res.json({
-      message: 'Model training completed',
-      dataPoints,
-      status: 'success'
-    });
-  } catch (error) {
-    console.error('❌ Training error:', error);
-    res.status(500).json({
-      error: 'Training failed',
-      message: error.message
-    });
-  }
+console.log("🔧 Loading prediction routes...");
+
+// -----------------------------
+// 🔹 Root Route (API Info)
+// -----------------------------
+router.get("/", (req, res) => {
+  res.json({
+    message: "Prediction API Routes",
+    routes: [
+      "GET /predictions/test",
+      "GET /predictions/current",
+      "POST /predictions/train",
+      "POST /predictions/generate",
+      "GET /predictions/accuracy",
+      "GET /predictions/all"
+    ],
+    status: "All routes available",
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// POST /predictions/generate - Generate predictions for specific date/hour
-router.post('/generate', protect('admin'), async (req, res) => {
-  try {
-    const { date, hour } = req.body;
-    
-    if (!date || hour === undefined) {
-      return res.status(400).json({
-        error: 'Missing required fields',
-        message: 'Date and hour are required'
-      });
-    }
-
-    const prediction = await predictionService.generatePredictions(date, hour);
-    await prediction.populate('predictions.menuItem', 'name category price');
-    
-    res.json({
-      message: 'Predictions generated successfully',
-      prediction
-    });
-  } catch (error) {
-    console.error('❌ Prediction generation error:', error);
-    res.status(500).json({
-      error: 'Prediction generation failed',
-      message: error.message
-    });
-  }
+// -----------------------------
+// 🔹 Test Route
+// -----------------------------
+router.get("/test", (req, res) => {
+  console.log("✅ GET /predictions/test called");
+  res.json({
+    message: "Prediction routes are working!",
+    timestamp: new Date().toISOString(),
+    route: "test",
+  });
 });
 
-// GET /predictions/current - Get predictions for next few hours
-router.get('/current', protect('admin'), async (req, res) => {
+// -----------------------------
+// 🔹 Current Predictions
+// -----------------------------
+router.get("/current", async (req, res) => {
   try {
     const now = new Date();
-    const nextHours = [];
-    
-    // Get predictions for next 6 hours
-    for (let i = 1; i <= 6; i++) {
-      const futureDate = new Date(now.getTime() + i * 60 * 60 * 1000);
-      nextHours.push({
-        date: futureDate.toISOString().split('T')[0],
-        hour: futureDate.getHours()
+    const currentHour = now.getHours();
+
+    // Try to fetch existing prediction for current date/hour
+    let prediction = await Prediction.findOne({
+      predictionFor: {
+        $gte: new Date(now.setHours(0, 0, 0, 0)),
+        $lt: new Date(now.setHours(23, 59, 59, 999))
+      },
+      hour: currentHour
+    }).populate("predictions.menuItem", "name price category");
+
+    // If no prediction exists, generate automatically using PredictionService
+    if (!prediction) {
+      prediction = await PredictionService.generatePredictions(new Date(), currentHour);
+      prediction = await prediction.populate("predictions.menuItem", "name price category");
+    }
+
+    res.json(prediction);
+  } catch (err) {
+    console.error("❌ Error fetching current prediction:", err.message);
+    res.status(500).json({
+      error: "Failed to fetch current prediction",
+      details: err.message,
+    });
+  }
+});
+
+// -----------------------------
+// 🔹 Train Model
+// -----------------------------
+router.post("/train", protect("admin"), async (req, res) => {
+  try {
+    const count = await PredictionService.collectHistoricalData();
+    res.json({
+      message: `Model training completed. Collected ${count} data points.`,
+      status: "success",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("❌ Training failed:", err.message);
+    res.status(500).json({ error: "Training failed", details: err.message });
+  }
+});
+
+// -----------------------------
+// 🔹 Generate Prediction Manually
+// -----------------------------
+router.post("/generate", protect("admin"), async (req, res) => {
+  try {
+    const { date, hour } = req.body;
+
+    if (!date || hour === undefined) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        required: { date: "YYYY-MM-DD", hour: "0-23" },
       });
     }
 
-    const predictions = await Prediction.find({
-      $or: nextHours.map(nh => ({
-        predictionFor: {
-          $gte: new Date(nh.date + 'T' + nh.hour.toString().padStart(2, '0') + ':00:00.000Z'),
-          $lt: new Date(nh.date + 'T' + (nh.hour + 1).toString().padStart(2, '0') + ':00:00.000Z')
-        }
-      }))
-    }).populate('predictions.menuItem', 'name category price imageUrl');
+    if (hour < 0 || hour > 23) {
+      return res.status(400).json({
+        error: "Invalid hour",
+        message: "Hour must be between 0 and 23",
+      });
+    }
+
+    const prediction = await PredictionService.generatePredictions(new Date(date), hour);
+    const populated = await prediction.populate("predictions.menuItem", "name price category");
 
     res.json({
-      predictions,
-      generatedAt: new Date()
+      message: "Prediction generated successfully",
+      prediction: populated,
+      status: "success",
     });
-  } catch (error) {
-    console.error('❌ Error fetching current predictions:', error);
-    res.status(500).json({
-      error: 'Failed to fetch predictions',
-      message: error.message
-    });
+  } catch (err) {
+    console.error("❌ Error generating prediction:", err.message);
+    res.status(500).json({ error: "Prediction failed", details: err.message });
   }
 });
 
-// GET /predictions/accuracy - Get prediction accuracy metrics
-router.get('/accuracy', protect('admin'), async (req, res) => {
+// -----------------------------
+// 🔹 Accuracy Metrics (placeholder)
+// -----------------------------
+router.get("/accuracy", protect("admin"), async (req, res) => {
   try {
-    const predictions = await Prediction.find({
-      accuracy: { $exists: true }
-    }).sort({ createdAt: -1 }).limit(50);
-
-    const avgAccuracy = predictions.reduce((sum, p) => sum + (p.accuracy || 0), 0) / predictions.length;
-    
-    const accuracyByHour = {};
-    predictions.forEach(p => {
-      if (!accuracyByHour[p.hour]) {
-        accuracyByHour[p.hour] = { total: 0, count: 0 };
-      }
-      accuracyByHour[p.hour].total += p.accuracy || 0;
-      accuracyByHour[p.hour].count += 1;
-    });
-
-    const hourlyAccuracy = Object.keys(accuracyByHour).map(hour => ({
-      hour: parseInt(hour),
-      accuracy: accuracyByHour[hour].total / accuracyByHour[hour].count
-    }));
-
+    // You can later calculate real accuracy from Prediction collection
     res.json({
-      overallAccuracy: avgAccuracy,
-      predictionCount: predictions.length,
-      hourlyAccuracy,
-      recentPredictions: predictions.slice(0, 10).map(p => ({
-        date: p.predictionFor,
-        hour: p.hour,
-        accuracy: p.accuracy,
-        totalPredicted: p.totalPredictedOrders
-      }))
+      overallAccuracy: null,
+      predictionCount: 0,
+      hourlyAccuracy: [],
+      recentPredictions: [],
+      note: "Accuracy metrics not yet implemented",
     });
-  } catch (error) {
-    console.error('❌ Error fetching accuracy metrics:', error);
-    res.status(500).json({
-      error: 'Failed to fetch accuracy metrics',
-      message: error.message
-    });
+  } catch (err) {
+    console.error("❌ Accuracy fetch failed:", err.message);
+    res.status(500).json({ error: "Accuracy fetch failed", details: err.message });
   }
 });
+
+// -----------------------------
+// 🔹 Get All Predictions (history)
+// -----------------------------
+router.get("/all", protect("admin"), async (req, res) => {
+  try {
+    const predictions = await Prediction.find()
+      .populate("predictions.menuItem", "name price category")
+      .sort({ predictionFor: -1, hour: 1 });
+
+    res.json(predictions);
+  } catch (err) {
+    console.error("❌ Error fetching predictions:", err.message);
+    res.status(500).json({ error: "Server error", details: err.message });
+  }
+});
+
+console.log("✅ Prediction routes loaded");
 
 module.exports = router;

@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "Hotel Ordering System Backend",
+  "description": "Hotel Ordering System Backend with Smart Predictions",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,7 +12,9 @@
     "hotel-ordering",
     "express",
     "node",
-    "mongodb"
+    "mongodb",
+    "predictions",
+    "ai"
   ],
   "author": "Your Name",
   "license": "ISC",
