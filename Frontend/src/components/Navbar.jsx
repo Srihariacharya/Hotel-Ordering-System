@@ -20,6 +20,7 @@ const Navbar = () => {
     { to: '/admin/analytics', label: 'Analytics', private: true, adminOnly: true }, // ✅ Admin-only Analytics
     { to: '/admin/update-images', label: 'Update Images', private: true, adminOnly: true },
     { to: '/admin/menu', label: 'Manage Menu', private: true, adminOnly: true }, 
+    { to: '/admin/predictions', label: 'Predictions', private: true, adminOnly: true }
 
   ];
 

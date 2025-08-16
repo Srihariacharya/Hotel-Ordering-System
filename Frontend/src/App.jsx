@@ -18,6 +18,7 @@ import UpdateMenuImages from './pages/UpdateMenuImages';
 import AdminMenuDashboard from './pages/AdminMenuDashboard';
 import EditItem from './pages/EditItem';
 import Invoice from './pages/Invoice';
+import PredictionDashboard from './pages/PredictionDashboard';
 
 // Layout & Context
 import Layout from './components/Layout';
@@ -113,6 +114,7 @@ export default function App() {
             <Route path="/register" element={<Register />} /> {/* 🔹 Changed */}
             <Route path="/invoice/:id" element={<Invoice />} />
             <Route path="/order/success" element={<OrderSuccess />} />
+            <Route path="/admin/predictions" element={<PredictionDashboard />} />
 
             {/* 🌐 Catch-all route */}
             <Route path="*" element={<Navigate to="/" replace />} />
