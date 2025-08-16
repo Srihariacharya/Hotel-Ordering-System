@@ -1,11 +1,26 @@
 // src/api/axios.js
 import axios from "axios";
 
-// ✅ Dynamic base URL
-const API_BASE_URL =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:5000"
-    : "https://your-backend-service.up.railway.app"; // replace with your Railway backend URL
+// ✅ Better environment detection - check multiple sources
+const isProduction = 
+  import.meta.env.PROD || // Vite production flag
+  import.meta.env.MODE === "production" || 
+  window.location.hostname !== "localhost";
+
+// ✅ Use environment variable first, then fallback to detection
+const API_BASE_URL = 
+  import.meta.env.VITE_API_BASE_URL || // From .env file
+  (isProduction 
+    ? "https://hotel-ordering-system-production.up.railway.app" 
+    : "http://localhost:5000");
+
+console.log("🌐 API Base URL:", API_BASE_URL);
+console.log("🔍 Environment:", { 
+  PROD: import.meta.env.PROD, 
+  MODE: import.meta.env.MODE,
+  hostname: window.location.hostname,
+  isProduction 
+});
 
 const api = axios.create({
   baseURL: API_BASE_URL,
