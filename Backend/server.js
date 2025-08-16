@@ -1,10 +1,10 @@
 require('dotenv').config();
-
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcryptjs');
+const path = require('path');
 
 const connectDB = require('./config/db');
 const User = require('./models/User');
@@ -12,7 +12,7 @@ const User = require('./models/User');
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const menuRoutes = require('./routes/menuRoutes');
-const orderRoutes = require('./routes/orderRoutes'); // optional
+const orderRoutes = require('./routes/orderRoutes');
 
 // ===== Validate Environment Variables =====
 if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
@@ -31,18 +31,18 @@ const app = express();
 
 // ===== Global Middleware =====
 app.use(helmet());
-app.use(express.json()); // Parse JSON bodies
-app.use(express.urlencoded({ extended: true })); // Parse form-data bodies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ===== CORS Settings =====
 const allowedOrigins = [
-  'http://localhost:5173', // local dev frontend
-  'https://magical-alpaca-fa7f48.netlify.app' // production frontend
+  'http://localhost:5173',
+  'https://magical-alpaca-fa7f48.netlify.app' // frontend on Netlify
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Allow Postman/curl with no origin
+    if (!origin) return callback(null, true); // Allow Postman/curl
     if (!allowedOrigins.includes(origin)) {
       return callback(new Error('Not allowed by CORS'), false);
     }
@@ -60,7 +60,7 @@ app.use(rateLimit({
   message: 'Too many requests from this IP, please try again later.',
 }));
 
-// ===== Admin Seeding (run once) =====
+// ===== Admin Seeding =====
 (async () => {
   try {
     const existingAdmin = await User.findOne({ email: 'admin@example.com' });
@@ -73,27 +73,22 @@ app.use(rateLimit({
         role: 'admin',
       });
       console.log('✅ Default admin created: admin@example.com / admin123');
-    } else {
-      console.log('⚠️ Admin already exists');
     }
   } catch (err) {
     console.error('❌ Admin seeding error:', err.message);
   }
 })();
 
-// ===== Temporary Cleanup for Double-Hashed Users =====
+// ===== Cleanup Double-Hashed Users =====
 (async () => {
   try {
-    console.log('🧹 Checking for double-hashed user passwords...');
     const users = await User.find({ email: { $ne: 'admin@example.com' } });
-
     for (const user of users) {
       if (user.password && user.password.length > 100) {
         console.log('🗑️ Removing possibly corrupted user:', user.email);
         await User.findByIdAndDelete(user._id);
       }
     }
-    console.log('✅ User cleanup completed');
   } catch (err) {
     console.error('❌ User cleanup error:', err.message);
   }
@@ -109,6 +104,15 @@ app.use('/auth', authRoutes);
 app.use('/menu', menuRoutes);
 app.use('/order', orderRoutes);
 
+// ===== Serve Frontend (optional if you want Netlify separate) =====
+// If you ever want to serve React build from backend:
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/build')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+  });
+}
+
 // ===== 404 Handler =====
 app.use((req, res) => {
   res.status(404).json({ error: '404 Not Found' });
@@ -120,12 +124,8 @@ app.use((err, _req, res, _next) => {
   res.status(err.status || 500).json({ error: err.message || 'Server Error' });
 });
 
-// ===== Verify Secrets Loaded =====
-console.log('ACCESS_TOKEN_SECRET:', process.env.ACCESS_TOKEN_SECRET ? 'Loaded' : 'Missing');
-console.log('REFRESH_TOKEN_SECRET:', process.env.REFRESH_TOKEN_SECRET ? 'Loaded' : 'Missing');
-
 // ===== Start Server =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
