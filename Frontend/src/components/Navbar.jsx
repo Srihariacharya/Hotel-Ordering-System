@@ -17,11 +17,10 @@ const Navbar = () => {
     { to: '/menu', label: 'Menu', private: false },
     { to: '/myorders', label: 'My Orders', private: true },
     { to: '/admin/orders', label: 'Admin Orders', private: true, adminOnly: true },
-    { to: '/admin/analytics', label: 'Analytics', private: true, adminOnly: true }, // ✅ Admin-only Analytics
+    { to: '/admin/analytics', label: 'Analytics', private: true, adminOnly: true },
+    { to: '/admin/predictions', label: 'Smart Predictions', private: true, adminOnly: true }, // ✅ Updated label
     { to: '/admin/update-images', label: 'Update Images', private: true, adminOnly: true },
-    { to: '/admin/menu', label: 'Manage Menu', private: true, adminOnly: true }, 
-    { to: '/admin/predictions', label: 'Predictions', private: true, adminOnly: true }
-
+    { to: '/admin/menu', label: 'Manage Menu', private: true, adminOnly: true }
   ];
 
   const renderLinks = () =>
@@ -37,7 +36,7 @@ const Navbar = () => {
           to={l.to}
           onClick={() => setOpen(false)}
           className={({ isActive }) =>
-            `px-3 py-2 rounded-md text-sm font-medium ${
+            `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
               isActive
                 ? 'bg-veg-600 text-white'
                 : 'text-veg-100 hover:bg-veg-600/20'
