@@ -18,7 +18,7 @@ const Navbar = () => {
     { to: '/myorders', label: 'My Orders', private: true },
     { to: '/admin/orders', label: 'Admin Orders', private: true, adminOnly: true },
     { to: '/admin/analytics', label: 'Analytics', private: true, adminOnly: true },
-    { to: '/admin/predictions', label: 'Smart Predictions', private: true, adminOnly: true }, // ✅ Updated label
+    { to: '/admin/predictions', label: 'AI Predictions', private: true, adminOnly: true }, // ✅ Updated label
     { to: '/admin/update-images', label: 'Update Images', private: true, adminOnly: true },
     { to: '/admin/menu', label: 'Manage Menu', private: true, adminOnly: true }
   ];
