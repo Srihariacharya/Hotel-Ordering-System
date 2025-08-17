@@ -4,6 +4,7 @@ Hotel Ordering System is an online platform designed to enhance the guest experi
 
 
 ## Features
+
 - **User  Registration and Login**: Guests can create accounts and log in to access their orders.
 -- **Table-wise Order Placement**: Waiters can place orders for specific tables.
 - **Add Menu Items to Cart**: Waiters can add menu items to the cart for easy ordering.
@@ -30,9 +31,102 @@ Hotel Ordering System is an online platform designed to enhance the guest experi
 - **Secure Authentication**: Utilizes JWT (JSON Web Tokens) for secure user authentication.
 
 ## Technologies Used
+
 - **Frontend**: React,Tailwind CSS
 - **Backend**: Node.js, Express.js
 - **Database**: MongoDB
 - **Authentication**: JWT (JSON Web Tokens)
 - **File Upload**: Multer for handling image uploads
 - **Flash Messages**: Connect-flash for user notifications
+
+## **Installation**
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/Srihariacharya/Hotel-Ordering-System.git
+   cd Hotel-Ordering-System
+   ```
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Set up your environment variables in a .env file:
+   ```
+   DB_URI=mongodb://<username>:<password>@localhost:27017/hotel_ordering_system
+   JWT_SECRET=your_jwt_secret
+   ```
+4. Start the MongoDB server:
+   ```
+   mongod
+   ```
+5. Run the application:
+   ```
+   node app.js
+   ```
+
+## Usage
+
+  - Open your browser and navigate to
+    ```
+    http://localhost:5173/
+    ```
+  - Register a new account or log in if you already have one.
+  - Browse through the available services and place orders.
+  - Access your order history and manage your requests.
+
+## Screenshots
+
+## Cashier Side
+
+ ### Home Page
+  <img width="500" height="600" alt="image" src="https://github.com/user-attachments/assets/1c708fc3-0f07-4e62-9a91-51e388f270f7" />
+  
+ ### Menu Page
+  <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/a3ce59c7-23eb-42be-9c48-12ac79d1b8bd" />
+  
+ ### Admin Order
+  <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/48e5c16b-594c-46f7-9134-73f1e13d2b9b" />
+  
+ ### Admin Analytics
+  <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/84f81232-b2c8-42b8-a40e-1ceb68a10151" /><br/>
+  <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/f95eda29-32a7-45e2-8fed-65fc46c44ef6" />
+  
+ ### AI Prediction
+  <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/cbed5784-7af3-4bb0-b270-ec04d3c76d58" />
+  
+ ### Admin Menu Dashboard
+  <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/224a24fb-1cf9-4a3c-93b5-e49b4ac10646" />
+
+## Waiter Side
+
+ ### Waiter Order
+  <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/e59bda18-282a-4f71-a422-6d79e0710479" />
+  
+ ### Waiter Order Cart
+  <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/0e4d73fb-ea23-44f7-8646-2b785c91e1f6" />
+
+## Light Mode
+  <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/b1493c52-9e8b-4957-b1ab-7fa61ed1b708" />
+
+## Hotel Bill
+  <img width="350" height="600" alt="image" src="https://github.com/user-attachments/assets/0877cb5f-a18a-4e6a-961e-8e0de3d34ec8" />
+
+## Contributing
+
+  Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
+
+## Acknowledgments
+
+- Express for the web framework
+- Mongoose for MongoDB object modeling
+- JWT for authentication
+- Multer for handling file uploads
+- TensorFlow.js for AI-powered predictions
+- GPT for guidance on building the project
+
+
+
+
+
+
+
