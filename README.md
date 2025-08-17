@@ -52,7 +52,7 @@ Hotel Ordering System is an online platform designed to enhance the guest experi
    ```
 3. Set up your environment variables in a .env file:
    ```
-   DB_URI=mongodb://<username>:<password>@localhost:27017/hotel_ordering_system
+   DB_URI=mongodb://<username>:<password>@localhost:5173/hotel_ordering_system
    JWT_SECRET=your_jwt_secret
    ```
 4. Start the MongoDB server:
