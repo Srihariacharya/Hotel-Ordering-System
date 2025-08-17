@@ -1,15 +1,14 @@
-// src/pages/PredictionDashboard.jsx - IMPROVED PIE CHART VERSION
+// src/pages/PredictionDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis,
+  BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
-import { Brain, TrendingUp, Clock, Target, RefreshCw, Calendar } from 'lucide-react';
+import { RefreshCw, Calendar, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-import { useAuth } from '../context/AuthContext';
 
 const PredictionDashboard = () => {
-  const { user } = useAuth(); 
   const [predictions, setPredictions] = useState([]);
   const [accuracyMetrics, setAccuracyMetrics] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -17,6 +16,8 @@ const PredictionDashboard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedHour, setSelectedHour] = useState(new Date().getHours());
   const [error, setError] = useState(null);
+
+  const navigate = useNavigate(); // ✅ Hook for navigation
 
   useEffect(() => {
     fetchCurrentPredictions();
@@ -31,7 +32,10 @@ const PredictionDashboard = () => {
 
       if (data && data.predictions) {
         const totalOrders = data.predictions.reduce((sum, item) => sum + item.predictedQuantity, 0);
-        const totalRevenue = data.predictions.reduce((sum, item) => sum + (item.menuItem?.price || 0) * item.predictedQuantity, 0);
+        const totalRevenue = data.predictions.reduce(
+          (sum, item) => sum + (item.menuItem?.price || 0) * item.predictedQuantity,
+          0
+        );
 
         setPredictions([{
           ...data,
@@ -108,7 +112,7 @@ const PredictionDashboard = () => {
     return 'text-red-600';
   };
 
-  // Enhanced pie chart data processing with 10 colors and proper color matching
+  // ===== Pie chart aggregation =====
   const pieDataMap = {};
   predictions.forEach(pred => {
     pred.predictions?.forEach(item => {
@@ -119,9 +123,9 @@ const PredictionDashboard = () => {
 
   let pieChartData = Object.entries(pieDataMap)
     .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value); // sort descending
+    .sort((a, b) => b.value - a.value);
 
-  const TOP_N = 10; // Show top 10 items
+  const TOP_N = 10;
   let othersValue = 0;
   if (pieChartData.length > TOP_N) {
     othersValue = pieChartData.slice(TOP_N).reduce((sum, item) => sum + item.value, 0);
@@ -131,130 +135,71 @@ const PredictionDashboard = () => {
     }
   }
 
-  // Enhanced color palette with 11 distinct colors (10 + Others)
   const PIE_COLORS = [
-    '#10B981', // Green
-    '#3B82F6', // Blue
-    '#674305ff', // Amber
-    '#EF4444', // Red
-    '#8B5CF6', // Purple
-    '#06B6D4', // Cyan
-    '#F97316', // Orange
-    '#84CC16', // Lime
-    '#EC4899', // Pink
-    '#6366F1', // Indigo
-    '#6B7280'  // Gray (for Others)
+    '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6',
+    '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#6366F1', '#6B7280'
   ];
 
-  // Custom label renderer - shows only percentage without item name
-  const renderCustomLabel = ({ percent }) => {
-    return `${(percent * 100).toFixed(0)}%`;
-  };
+  const renderCustomLabel = ({ percent }) => `${(percent * 100).toFixed(0)}%`;
 
-  // Custom legend with matching colors
-  const CustomLegend = ({ payload }) => {
-    return (
-      <div className="flex flex-wrap justify-center gap-2 mt-4">
-        {payload.map((entry, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: entry.color }}
-            ></div>
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              {entry.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-  
+  // ===== Top stat cards numbers =====
+  const totalPredOrders = predictions.reduce((s, p) => s + (p.totalPredictedOrders || 0), 0);
+  const totalPredRevenue = predictions.reduce((s, p) => s + (p.totalPredictedRevenue || 0), 0);
+  const avgOrderValue = totalPredOrders > 0 ? totalPredRevenue / totalPredOrders : 0;
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+
+        {/* ===== Page Header (Analytics style) ===== */}
+        <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Brain className="h-8 w-8 text-blue-600" />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Smart Order Prediction Engine</h1>
-              <p className="text-gray-600 dark:text-gray-400">AI-powered demand forecasting for optimized kitchen operations</p>
-            </div>
+            <div className="text-3xl">📈</div>
+            <h1 className="text-3xl font-bold text-veg-700 dark:text-green-400">
+              Prediction Dashboard
+            </h1>
           </div>
-          <div className="flex gap-3">
-            <button
-              onClick={trainModel}
-              disabled={training}
-              className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${training ? 'animate-spin' : ''}`} />
-              {training ? 'Training...' : 'Train Model'}
-            </button>
-            <button
-              onClick={fetchCurrentPredictions}
-              disabled={loading}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
+
+          {/* ✅ Back button */}
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </button>
+        </div>
+
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          AI-powered predictions for admin
+        </p>
+
+        {/* ===== THREE big stat cards (like Analytics) ===== */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Predicted Revenue</p>
+            <p className="mt-2 text-3xl font-extrabold text-green-600">
+              ₹{totalPredRevenue.toLocaleString()}
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Predicted Orders</p>
+            <p className="mt-2 text-3xl font-extrabold text-blue-600">{totalPredOrders}</p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Order Value</p>
+            <p className="mt-2 text-3xl font-extrabold text-purple-600">
+              ₹{avgOrderValue.toFixed(2)}
+            </p>
           </div>
         </div>
 
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Predictions</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{predictions.length}</p>
-              </div>
-              <Target className="h-8 w-8 text-blue-500" />
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Accuracy</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {accuracyMetrics && accuracyMetrics.overallAccuracy !== null
-                    ? `${(accuracyMetrics.overallAccuracy * 100).toFixed(1)}%` : '—'}
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {predictions.reduce((sum, p) => sum + (p.totalPredictedOrders || 0), 0)}
-                </p>
-              </div>
-              <Clock className="h-8 w-8 text-purple-500" />
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Predicted Revenue</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  ₹{predictions.reduce((sum, p) => sum + (p.totalPredictedRevenue || 0), 0).toLocaleString()}
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-yellow-500" />
-            </div>
-          </div>
-        </div>
-
-        {/* Generate New Prediction */}
+        {/* ===== Generate / Train controls (card) ===== */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm mb-8">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Generate New Prediction</h2>
-          <div className="flex gap-4 items-end">
+          <div className="flex flex-wrap gap-4 items-end">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date</label>
               <input
@@ -283,36 +228,67 @@ const PredictionDashboard = () => {
               className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
             >
               <Calendar className="h-4 w-4" />
-              Generate Prediction
+              Generate
             </button>
+
+            <div className="ml-auto flex gap-3">
+              <button
+                onClick={trainModel}
+                disabled={training}
+                className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${training ? 'animate-spin' : ''}`} />
+                {training ? 'Training…' : 'Train Model'}
+              </button>
+              <button
+                onClick={fetchCurrentPredictions}
+                disabled={loading}
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
           </div>
+          {error && <p className="text-red-500 mt-4">{error}</p>}
         </div>
-  
-        {/* Current Predictions & Charts */}
+
+        {/* ===== Content grid: list + charts ===== */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Predictions List */}
+          {/* Predictions list (card) */}
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Upcoming Predictions</h2>
             <div className="space-y-4 max-h-96 overflow-y-auto">
-              {predictions.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400">No predictions available.</p>}
+              {predictions.length === 0 && (
+                <p className="text-center text-gray-500 dark:text-gray-400">No predictions available.</p>
+              )}
               {predictions.map(prediction => (
-                <div key={prediction._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <div key={prediction._id || `${prediction.predictionFor}-${prediction.hour}`}
+                     className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-medium text-gray-900 dark:text-white">
                       {formatDateTime(prediction.predictionFor, prediction.hour)}
                     </h3>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">{prediction.totalPredictedOrders} orders</span>
-                      <span className="text-sm font-medium text-green-600">₹{prediction.totalPredictedRevenue?.toLocaleString()}</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {prediction.totalPredictedOrders} orders
+                      </span>
+                      <span className="text-sm font-medium text-green-600">
+                        ₹{prediction.totalPredictedRevenue?.toLocaleString()}
+                      </span>
                     </div>
                   </div>
                   <div className="space-y-2">
                     {prediction.predictions?.slice(0, 3).map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between text-sm">
-                        <span className="text-gray-700 dark:text-gray-300">{item.menuItem?.name || 'Unknown Item'}</span>
+                        <span className="text-gray-700 dark:text-gray-300">
+                          {item.menuItem?.name || 'Unknown Item'}
+                        </span>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{item.predictedQuantity} qty</span>
-                          <span className={`text-xs ${getConfidenceColor(item.confidence || 0)}`}>{((item.confidence || 0) * 100).toFixed(0)}%</span>
+                          <span className={`text-xs ${getConfidenceColor(item.confidence || 0)}`}>
+                            {((item.confidence || 0) * 100).toFixed(0)}%
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -322,9 +298,9 @@ const PredictionDashboard = () => {
             </div>
           </div>
 
-          {/* Charts */}
+          {/* Charts column */}
           <div className="space-y-6">
-            {/* Bar Chart */}
+            {/* Bar chart card */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Predicted Orders Chart</h2>
               {predictions.length > 0 ? (
@@ -333,19 +309,32 @@ const PredictionDashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="predictionFor"
-                      tickFormatter={(date) => new Date(date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                      tickFormatter={(date) =>
+                        new Date(date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
+                      }
                     />
                     <YAxis />
-                    <Tooltip labelFormatter={(date) => new Date(date).toLocaleString('en-IN', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit' })} />
+                    <Tooltip
+                      labelFormatter={(date) =>
+                        new Date(date).toLocaleString('en-IN', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit'
+                        })
+                      }
+                    />
                     <Legend />
                     <Bar dataKey="totalPredictedOrders" fill="#10B981" name="Orders" />
                     <Bar dataKey="totalPredictedRevenue" fill="#3B82F6" name="Revenue" />
                   </BarChart>
                 </ResponsiveContainer>
-              ) : <p className="text-center text-gray-500 dark:text-gray-400">No data to display chart.</p>}
+              ) : (
+                <p className="text-center text-gray-500 dark:text-gray-400">No data to display chart.</p>
+              )}
             </div>
 
-            {/* Enhanced Pie Chart */}
+            {/* Pie chart card */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Top Menu Items</h2>
               {pieChartData.length > 0 ? (
@@ -359,16 +348,16 @@ const PredictionDashboard = () => {
                         cx="50%"
                         cy="50%"
                         outerRadius={120}
-                        innerRadius={40} // Added inner radius for donut effect
+                        innerRadius={40}
                         fill="#8884d8"
-                        label={renderCustomLabel} // Custom label showing only percentage
+                        label={renderCustomLabel}
                         labelLine={false}
                       >
                         {pieChartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={PIE_COLORS[index]} />
                         ))}
                       </Pie>
-                      <Tooltip 
+                      <Tooltip
                         formatter={(value) => [`${value}`, 'Quantity']}
                         contentStyle={{
                           backgroundColor: '#374151',
@@ -379,14 +368,19 @@ const PredictionDashboard = () => {
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  
-                  {/* Custom Legend with proper color matching */}
-                  <CustomLegend 
-                    payload={pieChartData.map((item, index) => ({
-                      value: item.name,
-                      color: PIE_COLORS[index]
-                    }))}
-                  />
+
+                  {/* Custom legend */}
+                  <div className="flex flex-wrap justify-center gap-2 mt-4">
+                    {pieChartData.map((item, index) => (
+                      <div key={item.name} className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-3 rounded-full inline-block"
+                          style={{ backgroundColor: PIE_COLORS[index] }}
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <p className="text-center text-gray-500 dark:text-gray-400">No menu item data.</p>
