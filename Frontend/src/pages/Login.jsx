@@ -1,13 +1,13 @@
 // src/pages/Login.jsx
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import api from '../api/axios';
-import { useAuth } from '../context/AuthContext';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -18,16 +18,17 @@ export default function Login() {
 
   // Validate form
   const validateForm = () => {
-    if (!form.email.trim()) return 'Email is required';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return 'Invalid email format';
-    if (!form.password.trim()) return 'Password is required';
-    return '';
+    if (!form.email.trim()) return "Email is required";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+      return "Invalid email format";
+    if (!form.password.trim()) return "Password is required";
+    return "";
   };
 
   // Handle login
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     const validationError = validateForm();
     if (validationError) {
@@ -37,32 +38,41 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/login', {
+      const { data } = await api.post("/auth/login", {
         email: form.email.trim().toLowerCase(),
         password: form.password.trim(),
       });
 
       if (!data || !data.accessToken || !data.refreshToken) {
-        throw new Error('Invalid login response from server');
+        throw new Error("Invalid login response from server");
       }
 
       // Save tokens and user info
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
+      localStorage.setItem("user", JSON.stringify(data.user));
 
       // Update Auth Context
       login(data.user, data.accessToken, data.refreshToken);
 
       // Redirect based on role
-      if (data.user?.role === 'admin') {
-        navigate('/admin/orders');
+      if (data.user?.role === "admin") {
+        navigate("/admin/orders");
       } else {
-        navigate('/menu');
+        navigate("/menu");
       }
     } catch (err) {
-      console.error('Login error:', err.response?.data || err.message);
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      console.error("Login error:", err.response?.data || err.message);
+      if (err.message === "Network Error") {
+        setError(
+          "Unable to connect to the server. Please check your backend URL or network."
+        );
+      } else {
+        setError(
+          err.response?.data?.message ||
+            "Login failed. Please check your credentials."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -113,15 +123,15 @@ export default function Login() {
           disabled={loading}
           className={`w-full py-2 rounded font-semibold transition ${
             loading
-              ? 'bg-green-400 cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-700'
+              ? "bg-green-400 cursor-not-allowed"
+              : "bg-green-600 hover:bg-green-700"
           }`}
         >
-          {loading ? 'Logging in...' : 'Log In'}
+          {loading ? "Logging in..." : "Log In"}
         </button>
 
         <p className="mt-4 text-center text-sm text-gray-400">
-          Don’t have an account?{' '}
+          Don’t have an account?{" "}
           <Link to="/auth/register" className="text-green-400 hover:underline">
             Register
           </Link>

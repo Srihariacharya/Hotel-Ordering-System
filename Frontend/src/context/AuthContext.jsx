@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+// src/context/AuthContext.jsx
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import api from "../api/axios";
 
 const AuthContext = createContext();
 
@@ -6,86 +8,105 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize user from localStorage
+  // ================================
+  // 🔄 Initialize user from localStorage
+  // ================================
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('user');
-      const token = localStorage.getItem('accessToken');
-      
-      console.log('🔄 AuthContext initialization:', {
-        hasStoredUser: !!storedUser,
-        hasToken: !!token,
-      });
+    const restoreSession = async () => {
+      try {
+        const storedUser = localStorage.getItem("user");
+        const token = localStorage.getItem("accessToken");
+        const refreshToken = localStorage.getItem("refreshToken");
 
-      if (storedUser && token) {
-        const parsedUser = JSON.parse(storedUser);
-        const enhanced = { ...parsedUser, isAdmin: parsedUser.role === 'admin' };
-        setUser(enhanced);
-        console.log('✅ User session restored:', enhanced);
+        console.log("🔄 Restoring session:", {
+          hasStoredUser: !!storedUser,
+          hasAccessToken: !!token,
+          hasRefreshToken: !!refreshToken,
+        });
+
+        if (storedUser && token) {
+          const parsedUser = JSON.parse(storedUser);
+          const enhanced = { ...parsedUser, isAdmin: parsedUser.role === "admin" };
+          setUser(enhanced);
+          console.log("✅ User session restored:", enhanced);
+        } else if (refreshToken) {
+          // Attempt silent refresh
+          try {
+            const { data } = await api.post("/auth/refresh", { refreshToken });
+            localStorage.setItem("accessToken", data.accessToken);
+            localStorage.setItem("refreshToken", data.refreshToken);
+            localStorage.setItem("user", JSON.stringify(data.user));
+
+            const enhanced = { ...data.user, isAdmin: data.user.role === "admin" };
+            setUser(enhanced);
+            console.log("✅ Silent refresh success:", enhanced);
+          } catch (err) {
+            console.warn("⚠️ Silent refresh failed:", err);
+            localStorage.clear();
+          }
+        }
+      } catch (error) {
+        console.error("❌ Error restoring user session:", error);
+        localStorage.clear();
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('❌ Error restoring user session:', error);
-      localStorage.clear();
-    }
-    setLoading(false);
+    };
+
+    restoreSession();
   }, []);
 
+  // ================================
+  // 🎫 Get access token
+  // ================================
   const getToken = useCallback(() => {
-    const token = localStorage.getItem('accessToken');
-    console.log('🎫 Getting token:', token ? `${token.substring(0, 20)}...` : 'None');
-    return token;
+    const token = localStorage.getItem("accessToken");
+    return token || null;
   }, []);
 
+  // ================================
+  // 🔐 Login function
+  // ================================
   const login = useCallback((userData, accessToken, refreshToken) => {
-    console.log('🔐 AuthContext login called:', {
-      user: userData,
-      hasAccessToken: !!accessToken,
-      hasRefreshToken: !!refreshToken,
-    });
+    const enhanced = { ...userData, isAdmin: userData.role === "admin" };
 
-    const enhanced = { ...userData, isAdmin: userData.role === 'admin' };
-    
-    // Store in localStorage
-    localStorage.setItem('user', JSON.stringify(enhanced));
-    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem("user", JSON.stringify(enhanced));
+    localStorage.setItem("accessToken", accessToken);
     if (refreshToken) {
-      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem("refreshToken", refreshToken);
     }
-    
-    // Update state
+
     setUser(enhanced);
     setLoading(false);
-    
-    console.log('✅ Login completed, user set in context');
+
+    console.log("✅ Login completed:", enhanced);
   }, []);
 
+  // ================================
+  // 🚪 Logout function
+  // ================================
   const logout = useCallback(() => {
-    console.log('🚪 AuthContext logout called');
-    
-    localStorage.removeItem('user');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    
+    localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+
     setUser(null);
     setLoading(false);
-    
-    console.log('✅ Logout completed');
+
+    console.log("✅ Logout completed");
   }, []);
 
+  // ================================
+  // 🔍 Check authentication
+  // ================================
   const isAuthenticated = useCallback(() => {
     const token = getToken();
-    const currentUser = user;
-    const authenticated = !!(token && currentUser);
-    
-    console.log('🔍 Authentication check:', {
-      hasToken: !!token,
-      hasUser: !!currentUser,
-      authenticated
-    });
-    
-    return authenticated;
+    return !!(token && user);
   }, [user, getToken]);
 
+  // ================================
+  // ✅ Context value
+  // ================================
   const value = {
     user,
     loading,
@@ -95,17 +116,16 @@ export function AuthProvider({ children }) {
     isAuthenticated,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// ================================
+// 🔗 Custom hook to use AuthContext
+// ================================
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
