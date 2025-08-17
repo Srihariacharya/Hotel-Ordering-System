@@ -1,37 +1,28 @@
 // src/api/axios.js
 import axios from "axios";
 
-// ================================
-// 🔹 API Base URL
-// Use VITE_API_URL (Vite) or REACT_APP_API_URL fallback, else localhost
-// ================================
-const API_BASE_URL =
+// Figure out API base URL depending on environment
+let API_BASE_URL =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
   process.env.REACT_APP_API_URL ||
   "http://localhost:5000";
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
 });
-
-// ================================
-// 🔹 Debug Logging (only in dev)
-// ================================
+// Debug logging (only in dev)
 const log = (...args) => {
   if (
     (typeof import.meta !== "undefined" && import.meta.env?.DEV) ||
     process.env.NODE_ENV === "development"
   ) {
-    console.log("[Axios Debug]", ...args);
+    console.log(...args);
   }
 };
 
-// ================================
-// 🔹 Request Interceptor
-// Attach access token for protected routes
-// ================================
+// ✅ Request Interceptor
 api.interceptors.request.use(
   (config) => {
     const publicRoutes = ["/auth/login", "/auth/register", "/auth/refresh"];
@@ -54,10 +45,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ================================
-// 🔹 Response Interceptor
-// Handle 401 → try refresh token
-// ================================
+// ✅ Response Interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -84,19 +72,16 @@ api.interceptors.response.use(
           refreshToken,
         });
 
-        // Update tokens in localStorage
         localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("refreshToken", data.refreshToken);
         localStorage.setItem("user", JSON.stringify(data.user));
 
-        // Retry original request with new access token
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         console.error("❌ Refresh token failed:", refreshError);
         localStorage.clear();
 
-        // Redirect to login
         if (window.location.pathname !== "/login") {
           window.location.href = "/login";
         }

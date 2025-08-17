@@ -1,33 +1,26 @@
-// src/api/api.js
+import API_BASE_URL from './api';
 
-// ================================
-// 🔹 API Base URL
-// Dynamically set based on environment
-// ================================
+// api.js
+
+// Dynamically set the base URL depending on the environment
 const API_BASE_URL =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || // Vite env
-  process.env.REACT_APP_API_URL || // CRA fallback
-  (import.meta.env.MODE === "development"
+  import.meta.env.MODE === "development"
     ? "http://localhost:5000" // Local backend during development
-    : "https://hotel-ordering-system-production.up.railway.app"); // Production backend
+    : "https://hotel-ordering-system-production.up.railway.app";
 
-// ================================
-// 🔹 Example API call: fetch menu
-// ================================
+// Example API call (you can remove this if not needed here)
 export const fetchMenu = async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/menu`);
     if (!res.ok) {
-      throw new Error(`HTTP error! Status: ${res.status}`);
+      throw new Error(`Error: ${res.status}`);
     }
     return await res.json();
   } catch (error) {
-    console.error("❌ Failed to fetch menu:", error);
+    console.error("Failed to fetch menu:", error);
     return [];
   }
 };
 
-// ================================
-// 🔹 Export the base URL for other files
-// ================================
+// Export the base URL for use in other files
 export default API_BASE_URL;

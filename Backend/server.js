@@ -1,5 +1,4 @@
-require("dotenv").config(); // ✅ Load .env variables first
-
+require("dotenv").config();
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
@@ -15,13 +14,15 @@ const User = require("./models/User");
 // ================================
 // 🔐 Validate Environment Variables
 // ================================
-const REQUIRED_ENVS = ["ACCESS_TOKEN_SECRET", "REFRESH_TOKEN_SECRET", "MONGO_URI", "ADMIN_EMAIL", "ADMIN_PASSWORD"];
-REQUIRED_ENVS.forEach((envVar) => {
-  if (!process.env[envVar]) {
-    console.error(`❌ Missing ${envVar} in .env`);
-    process.exit(1);
-  }
-});
+if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
+  console.error("❌ Missing ACCESS_TOKEN_SECRET or REFRESH_TOKEN_SECRET in .env");
+  process.exit(1);
+}
+
+if (!process.env.MONGO_URI) {
+  console.error("❌ Missing MONGO_URI in .env");
+  process.exit(1);
+}
 
 // ================================
 // 📦 Connect to MongoDB
@@ -76,20 +77,20 @@ app.use(
 );
 
 // ================================
-// 👨‍💻 Admin Seeding (Secure)
+// 👨‍💻 Admin Seeding
 // ================================
 (async () => {
   try {
-    const existingAdmin = await User.findOne({ email: process.env.ADMIN_EMAIL });
+    const existingAdmin = await User.findOne({ email: "admin@example.com" });
     if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+      const hashedPassword = await bcrypt.hash("admin123", 10);
       await User.create({
         name: "Admin",
-        email: process.env.ADMIN_EMAIL,
+        email: "admin@example.com",
         password: hashedPassword,
         role: "admin",
       });
-      console.log(`✅ Default admin created: ${process.env.ADMIN_EMAIL} (password hidden)`);
+      console.log("✅ Default admin created: admin@example.com / admin123");
     }
   } catch (err) {
     console.error("❌ Admin seeding error:", err.message);
@@ -174,9 +175,11 @@ app.get("/debug/routes", (req, res) => {
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "client/build")));
   app.get("*", (req, res) => {
-    if (["/api/", "/auth/", "/menu/", "/order/", "/predictions/"].some((prefix) =>
-      req.path.startsWith(prefix)
-    )) {
+    if (
+      ["/api/", "/auth/", "/menu/", "/order/", "/predictions/"].some((prefix) =>
+        req.path.startsWith(prefix)
+      )
+    ) {
       return res.status(404).json({ error: "404 Not Found" });
     }
     res.sendFile(path.join(__dirname, "client/build", "index.html"));
