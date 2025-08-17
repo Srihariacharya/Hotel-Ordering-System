@@ -1,8 +1,8 @@
-Hotel Ordering System
+#Hotel Ordering System
 
 Hotel Ordering System is an online platform designed to enhance the guest experience in hotels by allowing users to browse services, place orders, and manage their requests seamlessly. The application is built with Node.js, Express, and MongoDB, featuring a user-friendly interface to streamline the ordering process.
 
-Features
+#Features
 User Registration and Login: Guests can create accounts and log in to access their orders.
 Table-wise Order Placement: Waiters can place orders for specific tables.
 Add Menu Items to Cart: Waiters can add menu items to the cart for easy ordering.
