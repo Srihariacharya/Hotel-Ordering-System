@@ -135,7 +135,7 @@ const PredictionDashboard = () => {
   const PIE_COLORS = [
     '#10B981', // Green
     '#3B82F6', // Blue
-    '#b3a50aff', // Amber
+    '#674305ff', // Amber
     '#EF4444', // Red
     '#8B5CF6', // Purple
     '#06B6D4', // Cyan
@@ -169,7 +169,7 @@ const PredictionDashboard = () => {
       </div>
     );
   };
-
+  
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
@@ -287,7 +287,7 @@ const PredictionDashboard = () => {
             </button>
           </div>
         </div>
-
+  
         {/* Current Predictions & Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Predictions List */}
