@@ -1,6 +1,6 @@
 {
   "name": "hotel-ordering-backend",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Hotel ordering system with AI predictions",
   "main": "server.js",
   "scripts": {
