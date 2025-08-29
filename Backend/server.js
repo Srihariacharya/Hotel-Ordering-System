@@ -11,14 +11,13 @@ const net = require("net");
 const connectDB = require("./config/db");
 const User = require("./models/User");
 
-// ================================
-// 🔐 Environment Variables Validation
-// ================================
+
 const requiredEnvVars = ['MONGO_URI', 'ACCESS_TOKEN_SECRET', 'REFRESH_TOKEN_SECRET'];
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
+
 if (missingVars.length > 0) {
-  console.error('❌ Missing required environment variables:', missingVars);
+  console.error('Missing required environment variables:', missingVars);
   console.error('Please check your .env file and ensure all required variables are set:');
   missingVars.forEach(varName => {
     console.error(`   - ${varName}`);
@@ -26,15 +25,12 @@ if (missingVars.length > 0) {
   process.exit(1);
 }
 
-console.log('✅ All required environment variables are present');
+console.log('All required environment variables are present');
 
-// ================================
-// 📦 Connect to MongoDB with Enhanced Error Handling
-// ================================
 const initializeDatabase = async () => {
   try {
     await connectDB();
-    console.log('✅ Database connection established');
+    console.log(' Database connection established');
     
     // Test the connection
     const dbState = mongoose.connection.readyState;
@@ -44,29 +40,23 @@ const initializeDatabase = async () => {
     
     return true;
   } catch (error) {
-    console.error('❌ Database initialization failed:', error.message);
+    console.error('Database initialization failed:', error.message);
     
     // Provide helpful error messages
     if (error.message.includes('authentication')) {
-      console.error('💡 Check your MongoDB username and password');
+      console.error('Check your MongoDB username and password');
     } else if (error.message.includes('network')) {
-      console.error('💡 Check your internet connection and MongoDB URI');
+      console.error(' Check your internet connection and MongoDB URI');
     } else if (error.message.includes('timeout')) {
-      console.error('💡 Database connection timed out - check firewall settings');
+      console.error('Database connection timed out - check firewall settings');
     }
     
     process.exit(1);
   }
 };
 
-// ================================
-// 🏗 Express App Setup
-// ================================
 const app = express();
 
-// ================================
-// 🛡 Enhanced Security & Middleware
-// ================================
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -91,17 +81,14 @@ app.use(express.json({
 }));
 
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// ================================
-// 🌐 Enhanced CORS Configuration
-// ================================
+app.use(express.static(path.join(__dirname, 'frontend/build')));
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   "https://magical-alpaca-fa7f48.netlify.app",
-  process.env.FRONTEND_URL // Support custom frontend URL
+  process.env.FRONTEND_URL 
 ].filter(Boolean); // Remove undefined values
 
 console.log('🌐 Allowed CORS origins:', allowedOrigins);
@@ -110,17 +97,17 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin) {
-      console.log('📱 Request with no origin allowed (mobile/API client)');
+      console.log(' Request with no origin allowed (mobile/API client)');
       return callback(null, true);
     }
     
     if (allowedOrigins.includes(origin)) {
-      console.log(`✅ CORS allowed for origin: ${origin}`);
+      console.log(`CORS allowed for origin: ${origin}`);
       return callback(null, true);
     }
     
     // Log blocked requests for debugging
-    console.warn(`🚫 CORS blocked for origin: ${origin}`);
+    console.warn(`CORS blocked for origin: ${origin}`);
     return callback(new Error(`CORS policy violation: Origin ${origin} is not allowed`), false);
   },
   credentials: true,
@@ -135,9 +122,6 @@ app.use(cors({
   optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 }));
 
-// ================================
-// 🚦 Enhanced Rate Limiting
-// ================================
 const createRateLimiter = (windowMs, max, message, skipSuccessfulRequests = false) => {
   return rateLimit({
     windowMs,
@@ -178,7 +162,7 @@ app.use((req, res, next) => {
   const start = Date.now();
   
   // Log request
-  console.log(`📨 ${req.method} ${req.path} from ${req.ip}`);
+  console.log(`${req.method} ${req.path} from ${req.ip}`);
   
   // Log response
   res.on('finish', () => {
@@ -191,9 +175,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// ================================
-// 👨‍💻 Enhanced Admin Seeding
-// ================================
 const seedAdminUser = async () => {
   try {
     const adminEmail = process.env.ADMIN_EMAIL || "admin@example.com";
@@ -214,16 +195,14 @@ const seedAdminUser = async () => {
       isVerified: true
     });
     
-    console.log(`✅ Default admin created: ${adminEmail} / ${adminPassword}`);
-    console.log('🔐 Please change the default admin password after first login');
+    console.log(` Default admin created: ${adminEmail} / ${adminPassword}`);
+    console.log(' Please change the default admin password after first login');
   } catch (err) {
-    console.error("❌ Admin seeding error:", err.message);
+    console.error("Admin seeding error:", err.message);
   }
 };
 
-// ================================
-// 🌍 Enhanced Root & Health Routes
-// ================================
+
 app.get("/", (req, res) => {
   res.json({
     message: "🚀 Hotel Ordering API with Smart Predictions",
@@ -438,7 +417,7 @@ if (process.env.NODE_ENV === "production") {
         return next();
       }
       
-      res.sendFile(path.join(buildPath, "index.html"));
+      res.sendFile(path.join(__dirname, 'frontend/build', 'index.html'));
     });
   } else {
     console.warn("⚠️ Frontend build directory not found at:", buildPath);
@@ -511,7 +490,7 @@ app.use((err, req, res, next) => {
 // ================================
 // 🚀 Enhanced Server Startup
 // ================================
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5173;
 
 const startServer = async (port) => {
   try {
