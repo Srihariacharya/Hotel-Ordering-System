@@ -28,11 +28,11 @@ router.post('/register', async (req, res) => {
 
     // ✅ CRITICAL FIX: Let the User model handle password hashing
     // Don't hash password here - the User model's pre('save') will do it
-    const user = await User.create({ 
-      name, 
-      email, 
+    const user = await User.create({
+      name,
+      email,
       password, // Raw password - let model hash it
-      role: 'user' 
+      role: 'user'
     });
 
     console.log('✅ User created:', user._id);
@@ -40,11 +40,11 @@ router.post('/register', async (req, res) => {
     const { accessToken, refreshToken } = generateTokens(user);
 
     res.status(201).json({
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        email: user.email, 
-        role: user.role 
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
       },
       accessToken,
       refreshToken
@@ -142,11 +142,11 @@ router.post('/refresh', async (req, res) => {
     console.log('✅ Tokens refreshed for:', user.email);
 
     res.json({
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        email: user.email, 
-        role: user.role 
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
       },
       accessToken,
       refreshToken: newRefresh

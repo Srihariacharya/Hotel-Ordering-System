@@ -1,6 +1,3 @@
-New Chat
-26 lines
-
 // api.js
 // Dynamically set the base URL depending on the environment
 const API_BASE_URL =
