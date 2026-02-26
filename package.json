@@ -1,4 +1,10 @@
 {
+  "name": "hotel-ordering-system",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node Backend/server.js",
+    "build": "echo 'No build step required'"
+  },
   "dependencies": {
     "axios": "^1.11.0",
     "cors": "^2.8.5",

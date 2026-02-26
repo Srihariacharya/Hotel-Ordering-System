@@ -3,9 +3,8 @@ services:
     name: hotel-ordering-backend
     env: node
     region: singapore
-    rootDir: Backend
-    buildCommand: npm install
-    startCommand: node server.js
+    buildCommand: cd Backend && npm install
+    startCommand: node Backend/server.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
