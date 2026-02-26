@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node Backend/server.js",
-    "build": "echo 'No build step required'"
+    "build": "echo 'No build step required'",
+    "vercel-build": "npm --prefix Frontend install && npm --prefix Frontend run build"
   },
   "dependencies": {
     "axios": "^1.11.0",
