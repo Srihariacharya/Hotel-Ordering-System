@@ -1,9 +1,10 @@
 // api.js
 // Dynamically set the base URL depending on the environment
 const API_BASE_URL =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:5000" // Local backend during development
-    : "https://hotel-ordering-system-production.up.railway.app"; // Production backend URL
+  import.meta.env.VITE_API_URL || // Set this in Netlify environment variables
+  (import.meta.env.MODE === "development"
+    ? "http://localhost:5000"
+    : ""); // fallback — should always be set via VITE_API_URL in production
 // Example API call to fetch menu items
 export const fetchMenu = async () => {
   try {

@@ -31,17 +31,17 @@ const initializeDatabase = async () => {
   try {
     await connectDB();
     console.log(' Database connection established');
-    
+
     // Test the connection
     const dbState = mongoose.connection.readyState;
     if (dbState !== 1) {
       throw new Error(`Database connection state: ${dbState} (expected: 1)`);
     }
-    
+
     return true;
   } catch (error) {
     console.error('Database initialization failed:', error.message);
-    
+
     // Provide helpful error messages
     if (error.message.includes('authentication')) {
       console.error('Check your MongoDB username and password');
@@ -50,7 +50,7 @@ const initializeDatabase = async () => {
     } else if (error.message.includes('timeout')) {
       console.error('Database connection timed out - check firewall settings');
     }
-    
+
     process.exit(1);
   }
 };
@@ -70,7 +70,7 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-app.use(express.json({ 
+app.use(express.json({
   limit: "10mb",
   verify: (req, res, buf) => {
     // Log large payloads for debugging
@@ -88,8 +88,13 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   "https://magical-alpaca-fa7f48.netlify.app",
-  process.env.FRONTEND_URL 
+  process.env.FRONTEND_URL
 ].filter(Boolean); // Remove undefined values
+
+// Netlify preview/deploy URLs pattern
+const netlifyPattern = /^https:\/\/[a-z0-9-]+\.netlify\.app$/;
+// Render preview URLs pattern
+const renderPattern = /^https:\/\/[a-z0-9-]+\.onrender\.com$/;
 
 console.log('🌐 Allowed CORS origins:', allowedOrigins);
 
@@ -100,12 +105,16 @@ app.use(cors({
       console.log(' Request with no origin allowed (mobile/API client)');
       return callback(null, true);
     }
-    
-    if (allowedOrigins.includes(origin)) {
+
+    if (
+      allowedOrigins.includes(origin) ||
+      netlifyPattern.test(origin) ||
+      renderPattern.test(origin)
+    ) {
       console.log(`CORS allowed for origin: ${origin}`);
       return callback(null, true);
     }
-    
+
     // Log blocked requests for debugging
     console.warn(`CORS blocked for origin: ${origin}`);
     return callback(new Error(`CORS policy violation: Origin ${origin} is not allowed`), false);
@@ -113,8 +122,8 @@ app.use(cors({
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: [
-    "Content-Type", 
-    "Authorization", 
+    "Content-Type",
+    "Authorization",
     "X-Requested-With",
     "Accept",
     "Origin"
@@ -160,10 +169,10 @@ app.use('/auth', createRateLimiter(
 // ================================
 app.use((req, res, next) => {
   const start = Date.now();
-  
+
   // Log request
   console.log(`${req.method} ${req.path} from ${req.ip}`);
-  
+
   // Log response
   res.on('finish', () => {
     const duration = Date.now() - start;
@@ -171,7 +180,7 @@ app.use((req, res, next) => {
     const statusEmoji = status >= 500 ? '💥' : status >= 400 ? '⚠️' : '✅';
     console.log(`${statusEmoji} ${req.method} ${req.path} ${status} (${duration}ms)`);
   });
-  
+
   next();
 });
 
@@ -179,7 +188,7 @@ const seedAdminUser = async () => {
   try {
     const adminEmail = process.env.ADMIN_EMAIL || "admin@example.com";
     const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
-    
+
     const existingAdmin = await User.findOne({ email: adminEmail });
     if (existingAdmin) {
       console.log('✅ Admin user already exists');
@@ -194,7 +203,7 @@ const seedAdminUser = async () => {
       role: "admin",
       isVerified: true
     });
-    
+
     console.log(` Default admin created: ${adminEmail} / ${adminPassword}`);
     console.log(' Please change the default admin password after first login');
   } catch (err) {
@@ -218,7 +227,7 @@ app.get("/", (req, res) => {
     ],
     endpoints: {
       auth: "/auth/*",
-      menu: "/menu/*", 
+      menu: "/menu/*",
       orders: "/order/*",
       predictions: "/predictions/*",
       health: "/health",
@@ -233,7 +242,7 @@ app.get("/health", async (req, res) => {
   try {
     const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
     const memoryUsage = process.memoryUsage();
-    
+
     // Check database connectivity
     let dbResponseTime = null;
     if (dbStatus === "connected") {
@@ -285,7 +294,7 @@ const safeRouteLoad = (routePath, prefix) => {
     console.log(`✅ ${prefix} routes loaded from ${routePath}`);
   } catch (error) {
     console.error(`❌ Failed to load ${prefix} routes from ${routePath}:`, error.message);
-    
+
     // Create a fallback route that returns an error
     app.use(prefix, (req, res) => {
       res.status(503).json({
@@ -318,8 +327,8 @@ app.get("/debug/routes", (req, res) => {
     stack.forEach((layer) => {
       if (layer.route) {
         const methods = Object.keys(layer.route.methods).join(", ").toUpperCase();
-        routes.push({ 
-          method: methods, 
+        routes.push({
+          method: methods,
           path: prefix + layer.route.path,
           middleware: layer.route.stack.length
         });
@@ -329,7 +338,7 @@ app.get("/debug/routes", (req, res) => {
       }
     });
   };
-  
+
   try {
     extractRoutes(app._router.stack);
     res.json({
@@ -360,7 +369,7 @@ app.get("/debug/status", async (req, res) => {
     const User = require("./models/User");
     const MenuItem = require("./models/MenuItem");
     const Order = require("./models/Order");
-    
+
     const [userCount, menuCount, orderCount] = await Promise.all([
       User.countDocuments(),
       MenuItem.countDocuments(),
@@ -398,25 +407,25 @@ app.get("/debug/status", async (req, res) => {
 // ================================
 if (process.env.NODE_ENV === "production") {
   const buildPath = path.join(__dirname, "client/build");
-  
+
   // Check if build directory exists
   const fs = require("fs");
   if (fs.existsSync(buildPath)) {
     console.log("📦 Serving static files from:", buildPath);
     app.use(express.static(buildPath));
-    
+
     // Handle React Router
     app.get("*", (req, res, next) => {
       // Skip API routes
-      if (req.path.startsWith('/auth/') || 
-          req.path.startsWith('/menu/') || 
-          req.path.startsWith('/order/') || 
-          req.path.startsWith('/predictions/') ||
-          req.path.startsWith('/health') ||
-          req.path.startsWith('/debug/')) {
+      if (req.path.startsWith('/auth/') ||
+        req.path.startsWith('/menu/') ||
+        req.path.startsWith('/order/') ||
+        req.path.startsWith('/predictions/') ||
+        req.path.startsWith('/health') ||
+        req.path.startsWith('/debug/')) {
         return next();
       }
-      
+
       res.sendFile(path.join(__dirname, 'frontend/build', 'index.html'));
     });
   } else {
@@ -478,9 +487,9 @@ app.use((err, req, res, next) => {
 
   res.status(statusCode).json({
     error: message,
-    ...(process.env.NODE_ENV === 'development' && { 
+    ...(process.env.NODE_ENV === 'development' && {
       stack: err.stack,
-      details: err 
+      details: err
     }),
     timestamp: new Date().toISOString(),
     requestId: req.id || 'unknown'
@@ -496,10 +505,10 @@ const startServer = async (port) => {
   try {
     // Initialize database first
     await initializeDatabase();
-    
+
     // Seed admin user
     await seedAdminUser();
-    
+
     const server = app.listen(port, () => {
       console.log('🎉=================================🎉');
       console.log(`✅ Server running on port ${port}`);
@@ -514,15 +523,15 @@ const startServer = async (port) => {
     // Enhanced graceful shutdown
     const gracefulShutdown = (signal) => {
       console.log(`\n🛑 ${signal} received, starting graceful shutdown...`);
-      
+
       server.close(async () => {
         console.log('✅ HTTP server closed');
-        
+
         try {
           // Close database connection
           await mongoose.connection.close();
           console.log('✅ Database connection closed');
-          
+
           // Stop cron jobs if they exist
           try {
             const predictionCron = require('./jobs/predictionCron');
@@ -531,7 +540,7 @@ const startServer = async (port) => {
           } catch (cronError) {
             console.log('ℹ️ No cron jobs to stop');
           }
-          
+
           console.log('✅ Graceful shutdown completed');
           process.exit(0);
         } catch (error) {
@@ -627,21 +636,21 @@ const main = async () => {
     console.log(`🔧 Node Version: ${process.version}`);
     console.log(`📂 Working Directory: ${process.cwd()}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    
+
     // Check port availability
     await checkPortAvailability(PORT);
     console.log(`✅ Port ${PORT} is available`);
-    
+
     // Start server
     const server = await startServer(PORT);
-    
+
     // Initialize cron jobs after server is running
     initializeCronJobs();
-    
+
     // Log memory usage
     const memUsage = process.memoryUsage();
     console.log(`💾 Memory Usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB heap / ${Math.round(memUsage.rss / 1024 / 1024)}MB RSS`);
-    
+
     return server;
   } catch (error) {
     console.error('💥 Application startup failed:', error.message);
