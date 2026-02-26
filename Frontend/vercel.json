@@ -1,6 +1,4 @@
 {
-    "buildCommand": "npm run vercel-build",
-    "outputDirectory": "Frontend/dist",
     "rewrites": [
         {
             "source": "/(.*)",
