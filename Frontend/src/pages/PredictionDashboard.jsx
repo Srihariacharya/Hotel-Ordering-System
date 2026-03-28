@@ -17,7 +17,7 @@ const PredictionDashboard = () => {
   const [selectedHour, setSelectedHour] = useState(new Date().getHours());
   const [error, setError] = useState(null);
 
-  const navigate = useNavigate(); // ✅ Hook for navigation
+  const navigate = useNavigate(); // 
 
   useEffect(() => {
     fetchCurrentPredictions();
