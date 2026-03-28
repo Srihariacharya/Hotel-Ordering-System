@@ -88,6 +88,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   "https://magical-alpaca-fa7f48.netlify.app",
+  "https://hotel-ordering-system-self.vercel.app",
   process.env.FRONTEND_URL
 ].filter(Boolean); // Remove undefined values
 
